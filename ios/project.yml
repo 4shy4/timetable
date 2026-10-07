@@ -1,0 +1,151 @@
+# XcodeGen 工程描述。
+#
+# ⚠️ 为什么用 XcodeGen 而不是把 .xcodeproj 提交进仓库：
+#   `project.pbxproj` 是一坨机器生成的、带 UUID 的 plist，**手写极容易错**，
+#   而且一旦错了报的都是"找不到文件/目标损坏"这类看不懂的错。
+#   用一份人能读的 YAML 描述工程，让 CI 用 `xcodegen generate` 生成 ——
+#   改起来是改 YAML，diff 也看得懂。
+#   CI 上装它只要一行：`brew install xcodegen`（macOS runner 自带 Homebrew）。
+#
+# 生成/构建（在 Mac 上或 CI 里）：
+#   cd ios && xcodegen generate
+#   xcodebuild -project Timetable.xcodeproj -scheme Timetable \
+#              -sdk iphoneos -configuration Release \
+#              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
+name: Timetable
+
+options:
+  bundleIdPrefix: local.timetable
+  deploymentTarget:
+    iOS: "16.0"          # 项目用到的 color-mix()/:has()/dvh 需要 15.4+，取 16.0 留余量
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    # 免费账号签名时 Xcode 会用这个 id + 你的 Apple ID 去申请证书
+    PRODUCT_BUNDLE_IDENTIFIER: local.timetable.app
+    MARKETING_VERSION: "0.12.0"
+    # ⚠️ 和 android 的 versionCode 对齐（16 → 17）：CFBundleVersion 增一，便于认出"这是新装的那一版"
+    CURRENT_PROJECT_VERSION: "17"
+    # ⚠️ 关掉 bitcode 之类会干扰"无签名打包"的选项
+    ENABLE_BITCODE: NO
+    SWIFT_VERSION: "5.0"
+    # 不让 Xcode 强塞签名（CI 上做未签名包）
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: NO
+
+targets:
+  Timetable:
+    type: application
+    platform: iOS
+    sources:
+      - path: Timetable
+    # ---------------------------------------------------------------------
+    # ⚠️⚠️ 这里**故意不用** XcodeGen 的 `info:` 键 —— 这是第一次真构建才暴露的 bug。
+    #
+    #   `info:` 在 XcodeGen 里的含义是"**生成**一个 Info.plist 写到这个路径"。
+    #   我原来写的是：
+    #       info:
+    #         path: Timetable/Info.plist
+    #   结果 xcodegen 把我**手写的那份 1753 字节的 plist 直接覆盖**成了一个
+    #   751 字节的最小版 —— CFBundleDisplayName / UILaunchScreen /
+    #   UISupportedInterfaceOrientations 全没了。
+    #
+    #   症状不是"编译失败"，而是**两条警告**：
+    #       warning: All interface orientations must be supported unless the app requires full screen.
+    #       warning: A launch configuration or launch storyboard or xib must be provided ...
+    #   也就是说 iPad 上**可能不是全屏**（被 letterbox）—— 对一个"气泡铺满屏幕"
+    #   的应用等于废掉。而且它**编译通过**，只有去看日志才发现。
+    #
+    #   修法用官方文档给的逃生口：XcodeGen 的 `info` 说明里写了
+    #   "…unless INFOPLIST_FILE is already defined in settings for this configuration"。
+    #   所以改用 INFOPLIST_FILE 指向我手写的那份，它就不再插手。
+    # ---------------------------------------------------------------------
+    settings:
+      base:
+        INFOPLIST_FILE: Timetable/Info.plist
+        # 只支持 iPad + iPhone（这个 App 主要给平板用，但手机也能装）
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""   # 没做图标，留空避免构建报错
+        # ------------------------------------------------------------------
+        # ⚠️⚠️ **弱链接** AlarmKit —— 这一行是"还能不能装在老系统上"的关键。
+        #
+        #   本工程的部署目标是 **16.0**，而 AlarmKit 是 **iOS 26** 才有的框架。
+        #   如果强链接它，App 在 iOS 16~25 的设备上会在**启动加载动态库时直接崩**
+        #   （dyld: Library not loaded），而不是"降级成没有闹钟"。
+        #
+        #   弱链接 = "有就用、没有就当它不存在"，配合代码里的
+        #   `if #available(iOS 26.0, *)` 才完整：
+        #     · 弱链接负责**启动时不崩**
+        #     · #available 负责**不调用不存在的 API**
+        #   两者缺一不可，少任何一个都是"在老设备上崩"。
+        # ------------------------------------------------------------------
+        OTHER_LDFLAGS: "$(inherited) -weak_framework AlarmKit"
+    # ---------------------------------------------------------------------
+    # 把 web/ 和 core/ 拷进 App Bundle
+    #
+    # ⚠️ 布局必须和 LocalServer.swift 的假设一致：
+    #      <bundle>/index.html      ← web/index.html
+    #      <bundle>/ui/app.js       ← web/ui/*        （因为 index.html 里写的是 /ui/app.js）
+    #      <bundle>/css/...         ← web/css/*
+    #      <bundle>/adapter/...     ← web/adapter/*
+    #      <bundle>/core/...        ← core/*          （index.html / 模块里写的是 /core/xxx.js）
+    #   也就是说 **web/ 的内容铺在 bundle 根上**，core/ 保持同名子目录。
+    #
+    # ⚠️ 单一来源：这里只是**拷贝**，不要在 ios/ 下再放一份 web/core。
+    #    和安卓的 copyWebAssets 是同一个思路 —— 改网页不需要动两端。
+    # ---------------------------------------------------------------------
+    postBuildScripts:
+      - name: Copy web + core into app bundle
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          APP="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
+          SRC="${SRCROOT}/.."
+          echo "→ 目标 bundle: $APP"
+          echo "→ 源仓库:     $SRC"
+          test -f "$SRC/web/index.html" || { echo "error: 找不到 $SRC/web/index.html"; exit 1; }
+          test -f "$SRC/core/time.js"   || { echo "error: 找不到 $SRC/core/time.js"; exit 1; }
+          # 清掉上一次的残留，避免删掉的旧模块还留在包里
+          rm -rf "$APP/core" "$APP/ui" "$APP/css" "$APP/adapter" "$APP/assets"
+          rm -f  "$APP/index.html" "$APP/join.html" "$APP/manifest.webmanifest" "$APP/sw.js"
+          cp -R "$SRC/web/." "$APP/"
+          mkdir -p "$APP/core"
+          cp -R "$SRC/core/." "$APP/core/"
+          echo "→ 拷贝完成：$(find "$APP" -name '*.js' | wc -l | tr -d ' ') 个 js 文件"
+          echo "→ 抽查："
+          # ⚠️ 抽查清单里要放**界面直接 import 的**文件：漏拷一个的症状是"App 一开就白屏"，
+          #    而且真机上没法看控制台，只能靠 CI 这一步炸出来。新增 core 模块时记得往这里加。
+          for f in index.html ui/app.js core/time.js core/state-ops.js core/holidays.js core/festival-art.js core/import-adapter.js adapter/native.js; do
+            if [ -f "$APP/$f" ]; then echo "   ✓ $f"; else echo "   ✗ 缺 $f"; exit 1; fi
+          done
+
+# ---------------------------------------------------------------------------
+# ⚠️ 必须显式声明 scheme —— 这是**要害**，别删。
+#
+# XcodeGen 的 `target.scheme` 是**可选**属性，措辞是"Generated scheme"：
+# **不写就不生成 scheme**（官方 issue #215 "Generate default shared schemes?"
+# 就是在请求"默认生成"，说明默认不生成）。
+#
+# 而 CI 里跑的是 `xcodebuild -scheme Timetable`。本地用 Xcode 打开工程时，
+# Xcode 会**自动创建**scheme，所以本机怎么试都没事 —— 但 CI 是无头的，
+# 没有这一步自动创建，于是会直接报
+#     "The project 'Timetable' does not contain a scheme named 'Timetable'"
+# 这是"第一次 CI 必挂"的典型原因之一。
+#
+# 这里显式给出，保证 `xcodegen generate` 之后 disk 上就有一份 **shared** scheme。
+# （workflow 里还有一步 `xcodebuild -list` 会把实际存在的 scheme 打出来，
+#   万一这里写错了，日志能立刻看出来，不用猜。）
+# ---------------------------------------------------------------------------
+schemes:
+  Timetable:
+    build:
+      targets:
+        Timetable: all
+    run:
+      config: Debug
+    archive:
+      config: Release

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="日程表">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f7dff"/>
+      <stop offset="1" stop-color="#2f5ae0"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#g)"/>
+  <rect x="34" y="46" width="124" height="112" rx="16" fill="#ffffff" opacity=".96"/>
+  <rect x="34" y="46" width="124" height="30" rx="16" fill="#ffffff"/>
+  <rect x="34" y="66" width="124" height="10" fill="#ffffff"/>
+  <g fill="#2f5ae0" opacity=".85">
+    <rect x="50" y="86" width="26" height="8" rx="4"/>
+    <rect x="50" y="104" width="46" height="8" rx="4"/>
+    <rect x="50" y="122" width="34" height="8" rx="4"/>
+  </g>
+  <circle cx="132" cy="60" r="9" fill="#ffcf5c"/>
+  <rect x="52" y="34" width="10" height="22" rx="5" fill="#e8edff"/>
+  <rect x="130" y="34" width="10" height="22" rx="5" fill="#e8edff"/>
+</svg>

@@ -1,0 +1,93 @@
+// app 模块：一个 WebView 外壳 + 内置本地服务。
+//
+// 为什么这么设计（而不是用 Kotlin 重写界面）：
+//   现有界面（气泡面板、课表、月历…）已经在 web/ 里成型，而且 core/ 是
+//   刻意做成平台无关的。把它原样塞进 APK，安卓端就只欠"外壳"三件事：
+//   怎么存、怎么弹通知、怎么显示。重写一遍界面等于把已经调好的东西推倒。
+//
+// 静态资源从仓库的 web/ 和 core/ 拷进 assets（见文件末尾的 copyWebAssets），
+// 保证**单一来源**：网页版改了，安卓包里跟着变，不会出现两份分叉的实现。
+plugins {
+  id 'com.android.application'
+  id 'org.jetbrains.kotlin.android'
+}
+
+android {
+  namespace 'com.timetable.app'
+  compileSdk 35
+
+  defaultConfig {
+    applicationId 'com.timetable.app'
+    minSdk 26          // WebView + 通知渠道都稳；覆盖 Android 8+
+    targetSdk 35
+    versionCode 17
+    // ⚠️ 和 iOS 那边（ios/Timetable/Info.plist 的 CFBundleShortVersionString）对齐：
+    //    两端的网页资源是同一份，版本号分叉只会让人分不清"这台设备装的是哪一版"。
+    versionName '0.12.0'
+  }
+
+  buildTypes {
+    release {
+      // 第一版先用 debug 签名能装能跑；正式发布再加自己的 keystore
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = '17'
+  }
+
+  // 不让 Gradle 压缩 assets 里的 js/json —— 免得路径被改
+  androidResources {
+    noCompress 'json', 'js', 'css'
+  }
+
+  // AGP 8 默认不生成 BuildConfig。我们要用 BuildConfig.DEBUG 决定
+  // 要不要开 WebView 远程调试（release 里不该开这个攻击面）。
+  buildFeatures {
+    buildConfig true
+  }
+
+}
+
+dependencies {
+  implementation 'androidx.core:core-ktx:1.13.1'
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'androidx.webkit:webkit:1.12.1'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+  // JSON：用 org.json（Android 平台自带，不需要额外依赖）
+
+}
+
+// ---------------------------------------------------------------------------
+// 把 web/ 与 core/ 拷进 assets：单一来源，网页版和安卓包不会分叉
+// ---------------------------------------------------------------------------
+def repoRoot = rootProject.projectDir.parentFile
+// 拷到 build/ 而不是 src/main/assets/：
+// 放进源码树会产生一份"看起来像源码、其实是生成物"的副本，谁改了它都会被
+// 下一次构建静默覆盖。生成物就该待在 build/ 里。
+def assetsDir = file("$buildDir/generated/webassets")
+
+tasks.register('copyWebAssets', Copy) {
+  description = '把仓库里的 web/ 与 core/ 拷进 APK 的 assets，避免出现两份实现'
+  from("$repoRoot/web") { into 'web' }
+  from("$repoRoot/core") { into 'core' }
+  into assetsDir
+  // 每次构建都刷新，防止改了网页却打进旧资源
+  outputs.upToDateWhen { false }
+}
+
+android.sourceSets.main.assets.srcDirs += assetsDir
+
+// 让所有打包/资源任务都依赖它
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+  dependsOn 'copyWebAssets'
+}
+tasks.matching { it.name == 'preBuild' }.configureEach {
+  dependsOn 'copyWebAssets'
+}

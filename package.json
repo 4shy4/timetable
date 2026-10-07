@@ -1,0 +1,36 @@
+{
+  "name": "timetable",
+  "version": "0.12.0",
+  "private": true,
+  "type": "module",
+  "description": "本地优先的日程表 / 课表应用（零依赖，手机与电脑通用，气泡浮动主界面）",
+  "scripts": {
+    "start": "node server/main.js",
+    "start:lan": "node server/main.js --lan",
+    "dev": "node --watch server/main.js",
+    "verify": "node tools/selfcheck.mjs",
+    "desktop": "node tools/desktop-bubbles.mjs",
+    "desktop:build": "node tools/desktop-bubbles.mjs --build",
+    "desktop:selftest": "node tools/desktop-bubbles.mjs --selftest",
+    "desktop:autostart": "node tools/desktop-bubbles.mjs --autostart",
+    "desktop:no-autostart": "node tools/desktop-bubbles.mjs --no-autostart",
+    "verify:all": "node tools/selfcheck.mjs && node tools/bubble-path.test.mjs && npm run android:verify",
+    "test": "node --test tools/test-isolation.test.mjs tools/scheduler.test.mjs tools/bubble.test.mjs tools/bubble-style.test.mjs tools/drag-nest.test.mjs tools/modal.test.mjs tools/textfit.test.mjs tools/recurrence.test.mjs tools/recur-levels.test.mjs tools/recycle-badge.test.mjs tools/defaults.test.mjs tools/precache.test.mjs tools/api-boundary.test.mjs tools/web-modules.test.mjs tools/qrcode.test.mjs tools/net.test.mjs tools/core.test.mjs tools/reminder-plan.test.mjs tools/countdown.test.mjs tools/level.test.mjs tools/event-model.test.mjs tools/ics.test.mjs tools/profile.test.mjs tools/local-mode.test.mjs tools/sync.test.mjs tools/nl-parse.test.mjs tools/share-plan.test.mjs tools/voice-bridge.test.mjs tools/notify-plan.test.mjs tools/desktop-bubbles.test.mjs tools/event-template.test.mjs tools/holidays.test.mjs tools/festival-art.test.mjs tools/bubble-festival-fields.test.mjs tools/bubble-finite.test.mjs tools/bubble-band-unset.test.mjs tools/bubble-longpress.test.mjs tools/bubble-longpress-hooks.test.mjs tools/bubble-view-dom.test.mjs tools/bubble-festival-art.test.mjs tools/alarms.test.mjs tools/alarms-view.test.mjs tools/course-delete.test.mjs",
+    "verify:local": "node tools/local-mode.test.mjs",
+    "verify:sync": "node tools/sync.test.mjs",
+    "verify:ics": "node tools/ics.test.mjs",
+    "android:toolchain": "node tools/android-bootstrap.mjs",
+    "android:toolchain:list": "node tools/android-bootstrap.mjs --list",
+    "android:toolchain:verify": "node tools/android-bootstrap.mjs --verify",
+    "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/android-build.ps1",
+    "android:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/android-build.ps1 -Install",
+    "android:parity": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/android-parity/run.ps1",
+    "android:http": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/android-http.ps1",
+    "android:verify": "npm run android:parity && npm run android:http",
+    "sync": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/sync-to-phone.ps1",
+    "sync:dry": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/sync-to-phone.ps1 -DryRun"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

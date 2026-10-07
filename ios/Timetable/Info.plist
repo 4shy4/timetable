@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- ------------------------------------------------------------------
+	     ⚠️⚠️ 这四个键**必须手写**，别删。
+
+	     它们是 XcodeGen 的 `info:` 会自动生成的（官方文档把它列在
+	     "generated automatically if appropriate" 里）。但本工程**故意不用 `info:`**
+	     —— 因为它会把这份手写 plist **覆盖**成最小版，导致 UILaunchScreen /
+	     UISupportedInterfaceOrientations 全丢、iPad 上 letterbox（见 project.yml 那段）。
+
+	     可一换成 `INFOPLIST_FILE`，XcodeGen 就不插手了 —— 于是这四个键**没人补**。
+	     后果不是"编译失败"，而是 **`.ipa` 根本装不上**：
+	     iloader 读不到 bundle id，报
+	         Expected value of type &str, but found None
+	     （Xcode 构建过程**不会**替你补 CFBundleIdentifier ——
+	       它只把 `$(...)` 展开成构建设置的值。）
+
+	     `$(PRODUCT_BUNDLE_IDENTIFIER)` / `$(EXECUTABLE_NAME)` 是**占位符**，
+	     Xcode 把 Info.plist 拷进 bundle 时会展开。
+	     ------------------------------------------------------------------ -->
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleDisplayName</key>
+	<string>日程表</string>
+	<key>CFBundleName</key>
+	<string>Timetable</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.12.0</string>
+	<key>CFBundleVersion</key>
+	<string>17</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- 不依赖后台唤醒：提醒是**提前注册**成系统定时通知的（见 NotificationScheduler.swift），
+	     所以不需要 UIBackgroundModes。省掉它反而少一类权限/审核问题。 -->
+
+	<!-- ------------------------------------------------------------------
+	     把 App 的 Documents 目录**暴露给「文件」App 和快捷指令**。
+
+	     ⚠️ 这两个键各管一半，缺一个都不完整：
+	       · UIFileSharingEnabled                 —— 让 Documents 出现在「文件」里
+	       · LSSupportsOpeningDocumentsInPlace    —— 允许别的 App **就地**打开里面的文件
+
+	     为什么需要（这是"语音助手"那条路的地基）：
+	       App 会把「未来 7 天」写成 `timetable-plan.txt` / `.json` 放在 Documents。
+	       快捷指令用「获取文件」读它 → Siri 就能念"明天有什么"。
+	       没有这两个键，文件写进去了但**外面看不见**，Siri 也就读不到。
+
+	     ⚠️ 都不需要任何 entitlement、不弹权限、不影响签名 —— 只是声明。
+	     副作用（好的那种）：用「文件」App 或电脑能直接看到 App 里那几个文件。
+	     ------------------------------------------------------------------ -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+
+	<!-- ------------------------------------------------------------------
+	     「提醒事项」权限 —— 语音桥用（让 Siri 原生读得到我们的日程）。
+
+	     ⚠️ 为什么需要：Siri **原生**只会读系统自己的东西（日历/提醒事项）。
+	     App 想把日程"给 Siri 念"，就得写进系统「提醒事项」的一个专用清单里。
+	     这样：
+	       · 念：「嘿 Siri，日程表里有什么」
+	       · 加：「嘿 Siri，在日程表里加：明天下午3点开会」
+	     **一个快捷指令都不用建** —— 之前"写文件 + 快捷指令"那条路就是
+	     坑太多才放弃的（动作名、类型过滤、运行时显示…）。
+
+	     ⚠️ 这是**隐私权限**，不是 entitlement —— 免费账号没问题，只是会弹一次窗。
+	     ⚠️ 两个键都要写：iOS 17+ 认 FullAccess 那个，更早的系统认另一个。
+	     ------------------------------------------------------------------ -->
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>把日程写进「提醒事项」里的一个专用清单，好让 Siri 能直接读出你的日程、也能用语音加日程。</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>把日程写进「提醒事项」里的一个专用清单，好让 Siri 能直接读出你的日程、也能用语音加日程。</string>
+
+	<!-- iOS 14+ 要求有启动屏声明，缺了会按小尺寸渲染（界面被当成 iPhone 版） -->
+	<key>UILaunchScreen</key>
+	<dict/>
+
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- ------------------------------------------------------------------
+	     AlarmKit（真闹钟）需要的两样东西，缺了会"能排但不响"。
+
+	     ⚠️ ① 用途说明：申请闹钟权限时的系统弹窗会引用它，缺了会失败。
+	     ② Live Activities：AlarmKit 的锁屏全屏呈现是**通过 Live Activity**
+	        实现的。探针第一次实测就是"排了 12 个没听到响"，
+	        而没声明这个能力时 `schedule()` 照样返回成功 —— 所以这一条
+	        是排查出来的，不是照抄文档。
+	     ------------------------------------------------------------------ -->
+	<key>NSAlarmKitUsageDescription</key>
+	<string>把最高档的日程提醒做成系统级闹钟，到点满音量响铃，不会被静音吃掉。</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+
+     ⚠️ 这条**必须**有（iOS 14+）：远程模式（连电脑）时，App 要连
+     `http://<电脑IP>:7080` —— 那是一个**局域网地址**。iOS 14 起，
+     访问局域网地址会弹一次"是否允许本地网络"的权限窗，而**没有这个用途说明
+     字符串时系统会直接拒绝**，App 里看不到任何提示，只表现为"连不上电脑"。
+     （本机壳自己的 127.0.0.1 不算局域网，不受这条影响 —— 所以
+       "本机直连"那一档在任何情况下都不需要它。）
+     ⚠️ 免费账号也能用，只是会弹一次窗。 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>连同一 Wi-Fi 下那台电脑时（远程模式 / 设备间同步），需要访问局域网地址。不连电脑时用不到这个权限。</string>
+
+	<!-- ------------------------------------------------------------------
+	     ATS（App Transport Security）：允许连**局域网里的 http 服务**。
+
+     ⚠️ 为什么必须加（远程模式 / 同步要连电脑的 http 局域网地址）：
+        平板要把请求发到 `http://<电脑IP>:7080` ——
+        那是一个**明文 http** 的局域网地址。iOS 的 ATS 默认**只豁免 localhost**：
+        `127.0.0.1`（本机壳自己的服务）能连，但 `192.168.x.x` / `10.x.x.x`
+        这种局域网地址会被直接拦掉，**连接根本发不出去**。
+        而用户看到的现象是"连不上电脑"——他只会去查 Wi-Fi、查同步开关，
+        永远查不到 ATS 头上（App 里没有任何报错，系统的提示也不出现）。
+
+     ⚠️ 用的是 `NSAllowsLocalNetworking`（**只**放开局域网/链路本地），
+        它**不是** `NSAllowsArbitraryLoads`（那个是"所有 http 全放开"）：
+          · NSAllowsLocalNetworking = 允许 .local 主机名与私有网段地址走 http，
+            公网 http 仍然被 ATS 挡住 —— 正是这个功能需要的**最小**口子；
+          · NSAllowsArbitraryLoads = 连公网 http 也放开，等于把整个 App 的
+            传输安全全关掉（而且上架时会被要求解释）。这个 App 没有任何
+            需要明文公网的理由，所以**不用**那个。
+     ⚠️ "连电脑"这条路只在**同一个 Wi-Fi** 下通（那是网络的事，不是 ATS 的事）。
+     ⚠️ 只改了这份 plist，**没有编译验证**（本机没有 macOS/Xcode）。
+        真正的验证只能上真机：在 iPad 上开远程模式、填电脑地址，点「保存并测试」。
+     ------------------------------------------------------------------ -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- ------------------------------------------------------------------
+	     自定义 URL scheme —— 这是 **Siri / 快捷指令联动的唯一入口**。
+
+	     为什么走这条路（而不是 App Intents）：原生 Siri 支持需要
+	     `com.apple.developer.siri` 这个 entitlement，免费 Apple 账号拿不到，
+	     而且**侧载时缺它会让 App 一启动就崩**（见 transcripts/0015 记的那次调研）。
+	     而"自定义 URL scheme + 快捷指令"不需要任何权限：
+	     用户建一个快捷指令（听写文本 → 打开 URL timetable://add?text=…），
+	     Siri 执行的是**快捷指令**（苹果自己的 App），不是我们的意图。
+
+	     ⚠️ 这个键不会影响签名/安装。但它一旦写错（比如 scheme 里有大写或空格），
+	     表现是"快捷指令点了没反应"，很难查 —— 所以只允许小写字母。
+	     ------------------------------------------------------------------ -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>local.timetable.app.deeplink</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>timetable</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- 没有用非豁免加密，省掉每次上传的出口合规问答 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+</dict>
+</plist>

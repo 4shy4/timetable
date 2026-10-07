@@ -1,3 +1,44 @@
-/node_modules/
+# 用户数据：绝不入库
+data/
+fired.json
+*.broken-*
+
+# 运行时与构建产物
+runtime/
+build/
+node_modules/
+server.log
+server.pid
+
+# 安卓：工具链（1.3 GB，按 README 自己 bootstrap）、构建缓存与产物
+android/toolchain/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/**/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# iOS
+ios/**/build/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/**/DerivedData/
+*.ipa
+*.mobileprovision
+*.p12
+
+# 凭证（本项目不需要任何凭证，但防止误提交）
+.secrets/
+*.token
+*.pfx
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
 .DS_Store
 Thumbs.db
+desktop.ini

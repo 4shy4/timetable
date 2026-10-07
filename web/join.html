@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#3b6ef6" />
+<title>手机接入 · 日程表</title>
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<!-- iOS 也支持"添加到主屏幕"，加上这几个 meta 后打开是全屏无地址栏 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="日程表" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/assets/icon-192.png" />
+<style>
+  :root { color-scheme: light dark; --bg:#f5f6f8; --card:#fff; --text:#1b1f24; --muted:#6b7280; --line:#e6e8ec; --brand:#3b6ef6; --ok:#10b981; --warn:#f59e0b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#171a21; --text:#e8eaed; --muted:#9aa2af; --line:#262b34; } }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:20px 16px 40px; font:15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:520px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+  h1 { font-size:20px; margin:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .qr { display:grid; place-items:center; padding:12px; background:#fff; border-radius:16px; border:1px solid var(--line); }
+  .qr svg { width:min(70vw, 260px); height:auto; display:block; }
+  .addr { font:600 16px/1.5 ui-monospace, Consolas, monospace; word-break:break-all; text-align:center; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1; min-width:120px;
+         padding:12px 16px; border-radius:12px; border:1px solid var(--line); background:var(--card);
+         color:var(--text); font-weight:600; font-size:15px; text-decoration:none; cursor:pointer; }
+  .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+  ol { margin:6px 0 0; padding-left:20px; font-size:14px; }
+  li { margin:4px 0; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); color:var(--muted); }
+  .warn { color:#b45309; }
+  .ok { color:#15803d; }
+  code { background:rgba(127,127,127,.14); padding:1px 5px; border-radius:5px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>在手机上使用日程表</h1>
+  <p class="muted" id="status">正在获取接入地址…</p>
+
+  <div class="qr" id="qrBox"></div>
+  <div class="addr" id="addr">—</div>
+
+  <div class="row">
+    <a class="btn primary" id="openBtn" href="#">打开日程表</a>
+    <button class="btn" id="copyBtn" type="button">复制地址</button>
+  </div>
+
+  <div class="card" id="installCard">
+    <b>让它变成手机上的 App</b>
+    <ol>
+      <li id="stepInstall">点浏览器右上角菜单 → 选「<b>添加到主屏幕</b>」或「安装应用」</li>
+      <li>回到手机桌面，会出现一个「日程表」图标</li>
+      <li>以后点图标就能直接打开，<b>没有地址栏</b>，和 App 一样</li>
+    </ol>
+    <p class="muted" id="installHint"></p>
+  </div>
+
+  <!--
+    证书卡片。
+    ⚠️ 对 **iOS** 来说，"点高级→继续前往"**不够**：
+       不真正信任证书，iOS 上 Service Worker 装不上，
+       于是"添加到主屏幕"只是个网页壳 —— 没有离线、没有通知、没有图标。
+       （判断依据是 WebKit 的 SW 注册要求可信凭据 / 安全上下文。）
+    所以 iOS 用户必须先装证书 + 在"关于本机→证书信任设置"里打开信任。
+  -->
+  <div class="card" id="certCard" hidden>
+    <b>先装一下证书（iOS 必须，安卓建议）</b>
+    <p class="muted" style="margin:6px 0 8px">
+      服务跑在你自己电脑上，用的是自签名证书。不装的话会一直提示"不安全"。
+    </p>
+    <div class="row" style="margin:0 0 10px;flex-wrap:wrap">
+      <!--
+        ⚠️ iOS 必须用 **.mobileconfig**（配置描述文件）这条路。
+        直接给 .crt 时 Safari 有可能只把它存成"文件"（进"文件"App），
+        那种证书进的是证书信任库，**永远不出现在「证书信任设置」里**。
+        `.mobileconfig` 是 iOS 唯一保证走"已下载描述文件 → 安装"流程的格式。
+      -->
+      <a class="btn primary" id="profileBtn" href="/profile">① 下载配置描述文件</a>
+      <a class="btn" id="certBtn" href="/cert">（备选）下载 .crt</a>
+    </div>
+    <div id="iosSteps" hidden>
+      <b style="font-size:13px">iPad / iPhone 步骤</b>
+      <ol class="muted" style="margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.7">
+        <li><b>别用无痕浏览</b>（无痕模式下 Safari 不处理描述文件）</li>
+        <li>点上面的「<b>① 下载配置描述文件</b>」→ 弹「此网站正尝试下载一个配置描述文件」→ <b>允许</b></li>
+        <li>打开「<b>设置</b>」→ 顶部会多出「<b>已下载描述文件</b>」→ 点进去 → <b>安装</b>（要输锁屏密码）</li>
+        <li>安装页上那个红色的「<b>未验证</b>」<b>是正常的</b> —— 这不是 Apple 签发的描述文件就一定这么显示，
+            它<b>不代表装失败</b>。点右上角「<b>安装</b>」继续就行（这里最容易误以为出错而放弃）</li>
+        <li>装好后在「设置 → 通用 → <b>VPN 与设备管理</b>」里能看到 <b>Timetable Local CA</b>，
+            说明描述文件装进去了</li>
+        <li>再进「设置 → 通用 → <b>关于本机</b>」→ 拉到底「<b>证书信任设置</b>」→ 把
+            <b>Timetable Local CA</b> 的开关<b>打开</b>（这一步最容易漏；打开之后它才会从「未验证」变成「已验证」）</li>
+        <li>回到 Safari 刷新本页 → 再「添加到主屏幕」，这时才是真正的 App</li>
+      </ol>
+    </div>
+    <div id="androidSteps" hidden>
+      <b style="font-size:13px">安卓步骤（可选）</b>
+      <ol class="muted" style="margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.7">
+        <li>点「下载证书」→ 打开「设置 → 安全 → 加密与凭据 → 安装证书 → CA 证书」</li>
+        <li>选刚下载的文件安装</li>
+        <li>回去刷新本页，再「添加到主屏幕」</li>
+      </ol>
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:12px">
+      不想装也行：点「<b>高级</b>」→「<b>继续前往</b>」照样能用，
+      只是 iOS 上拿不到离线能力和通知。
+    </p>
+  </div>
+
+  <!--
+    系统日历订阅卡片。
+    这是 iOS 上"关掉 App 也能响提醒"的**唯一可靠办法**：
+      网页版提醒是页面里的 setInterval 自查 —— 页面不开就不检查；
+      安卓能用 AlarmManager 系统闹钟，iOS 装不了 APK。
+    订阅一份 .ics 之后，提醒由 iOS 自己的日历发出，**电脑关着也照响**。
+    注意 iOS 上必须确认「移除提醒」是关闭的，否则订阅日历的闹钟会被丢掉。
+  -->
+  <div class="card" id="calCard" hidden>
+    <b>让「日历」帮你提醒（iPad 关掉 App 也能响）</b>
+    <p class="muted" style="margin:6px 0 10px">
+      网页版提醒只在页面开着时有效。订阅到系统「日历」之后，提醒由 iOS 自己发出，
+      <b>电脑关着也照响</b>。
+    </p>
+    <div class="row" style="margin:0 0 10px;flex-wrap:wrap">
+      <a class="btn primary" id="calBtn" href="#">订阅到系统日历</a>
+      <a class="btn" id="calDl" href="#">下载 .ics（一次性导入）</a>
+      <button class="btn" id="calCopy" type="button">复制订阅地址</button>
+    </div>
+    <ol class="muted" style="margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.7">
+      <li><b>先试「订阅」</b>：会问「要订阅日历吗」→ 订阅。以后电脑改了日程，iPad 会自动跟着更新</li>
+      <li>如果订阅报「<b>验证失败，请编辑URL，然后重试</b>」——那通常是<b>证书还没被真正信任</b>
+          （日历是后台服务在取，它没法像 Safari 那样点「继续前往」）。
+          这时改用「<b>下载 .ics</b>」：把文件存到「文件」，点开它 → 日历弹「添加全部」→ 确认。
+          <b>这条路不需要证书、也不校验 URL</b>，一定能成</li>
+      <li>订阅成功后进「设置 → 日历 → 账户 → <b>已订阅的日历</b>」点这条，确认
+          「<b>移除提醒</b>」是<b>关闭</b>的（默认就是关的。打开着就不会响提醒）</li>
+    </ol>
+    <p class="muted" id="calUrl" style="margin:8px 0 0;font-size:12px;word-break:break-all"></p>
+    <p class="muted" style="margin:6px 0 0;font-size:12px">
+      日历是<b>只读</b>的：在这里勾掉的事会自动从日历里消失，但改日历不会影响本应用。
+    </p>
+  </div>
+
+  <div class="card">
+    <b>前提条件</b>
+    <p class="muted" style="margin:6px 0 0">
+      手机和这台电脑要连<b>同一个 WiFi</b>；电脑上的日程表服务要一直在运行（关了就打不开）。
+    </p>
+    <p class="muted" id="lanWarn" style="margin:6px 0 0" hidden>
+      ⚠️ <b>电脑上的服务没有开"局域网模式"</b>，手机连不上。
+      请关掉日程表，改用 <code>npm run start:lan</code> 启动（或给启动命令加 <code>--lan</code>）。
+    </p>
+  </div>
+
+  <p class="muted" style="text-align:center">
+    数据保存在这台电脑上，手机只是用来查看和修改，多台设备看到的是同一份数据。
+  </p>
+</div>
+
+<script>
+(async function () {
+  const statusEl = document.getElementById('status');
+  const addrEl = document.getElementById('addr');
+  const qrBox = document.getElementById('qrBox');
+  const openBtn = document.getElementById('openBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const certCard = document.getElementById('certCard');
+  const installHint = document.getElementById('installHint');
+  const stepInstall = document.getElementById('stepInstall');
+
+  const isSecure = location.protocol === 'https:';
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // 系统日历的订阅地址（等 /api/net 回来才知道该用哪个 IP）
+  let calUrl = '';
+  if (isIOS) {
+    stepInstall.innerHTML = '点底部「分享」按钮 → 选「<b>添加到主屏幕</b>」';
+  }
+
+  try {
+    const res = await fetch('/api/net');
+    const net = await res.json();
+    const url = isSecure
+      ? (net.httpsUrls[0] || net.primary)
+      : (net.primary || net.httpUrls[0]);
+
+    if (!url) {
+      statusEl.textContent = '没有检测到局域网地址：请确认电脑已连上 WiFi/网线。';
+      return;
+    }
+    // 如果手上的地址和推荐地址不同（比如用 http 进来的），提示换 https
+    const recommended = net.hasCert ? (net.httpsUrls[0] || url) : url;
+    addrEl.textContent = recommended;
+    openBtn.href = recommended;
+    statusEl.innerHTML = '手机扫码，或直接在浏览器输入下面的地址：';
+
+    if (net.hasCert && !isSecure) {
+      certCard.hidden = false;
+      statusEl.innerHTML = '检测到你正用 http 访问。<b>iOS 必须走 https 才能装成 App</b>，请改用：';
+    } else if (net.hasCert && isSecure && (isIOS || /Android/i.test(navigator.userAgent))) {
+      // https 下也把证书卡片露出来 —— "没装证书"和"装了但没信任"是两回事，
+      // 后者在 iOS 上尤其常见（漏了"证书信任设置"那一步）。
+      certCard.hidden = false;
+    }
+    if (certCard && !certCard.hidden) {
+      document.getElementById(isIOS ? 'iosSteps' : 'androidSteps').hidden = false;
+    }
+
+    // 服务没开局域网模式时，手机**根本连不上** —— 这是最容易卡住的一步，
+    // 必须在页面上直接说清（用户看不到电脑上的日志）。
+    if (!net.lan) {
+      const w = document.getElementById('lanWarn');
+      if (w) w.hidden = false;
+    }
+
+    if (!net.hasCert) {
+      installHint.innerHTML = '注意：电脑端还没生成证书，<b class="warn">此时无法"添加到主屏幕"</b>。在电脑上跑 <code>npm run cert</code> 生成证书，然后重启服务即可。';
+    } else if (isSecure) {
+      installHint.innerHTML = '<span class="ok">可以添加到主屏幕了。</span>若仍提示不安全，按上面「先装一下证书」操作。';
+    }
+
+    // 二维码内容 = 推荐地址
+    qrBox.innerHTML = await (await fetch('/api/qr?url=' + encodeURIComponent(recommended))).text();
+
+    // ---- 系统日历订阅 ----
+    // ⚠️ 用 **http（7080）**，不用 https（7443）—— 踩过，别改：
+    //    `webcal://` 按惯例会被改写成 `http://`，而端口还是 7443 的话，
+    //    明文请求打到只讲 TLS 的监听上会被直接掐断 → iOS 报
+    //    「验证失败，请编辑URL，然后重试」。见 web/ui/views/settings.js 的同类注释。
+    const httpBase = (net.httpUrls && net.httpUrls[0]) || '';
+    const httpsBase = (net.httpsUrls && net.httpsUrls[0]) || '';
+    const feedUrl2 = httpBase ? `${httpBase}/calendar.ics`
+      : (httpsBase ? `${httpsBase}/calendar.ics` : '');
+    if (feedUrl2) {
+      calUrl = feedUrl2;
+      const calCard = document.getElementById('calCard');
+      // webcal:// 是订阅日历的专用 scheme，点一下直接弹订阅框，不用手打地址
+      document.getElementById('calBtn').href = calUrl.replace(/^https?:\/\//, 'webcal://');
+      // 一次性导入（下载成文件）—— 订阅报"验证失败"时的兜底，不碰证书
+      document.getElementById('calDl').href = calUrl + '?download=1';
+      document.getElementById('calUrl').textContent = calUrl
+        + (httpsBase ? `　（备选：${httpsBase}/calendar.ics，证书信任后可用）` : '');
+      calCard.hidden = false;
+    }
+  } catch (err) {
+    statusEl.textContent = '获取接入地址失败：' + err.message;
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const text = addrEl.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = '已复制';
+      setTimeout(() => { copyBtn.textContent = '复制地址'; }, 1500);
+    } catch {
+      const r = document.createRange();
+      r.selectNodeContents(addrEl);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  });
+
+  // 复制订阅地址（iOS 上 clipboard 在非 https 下会被拒，那就退化成选中文本）
+  const calCopy = document.getElementById('calCopy');
+  calCopy.addEventListener('click', async () => {
+    if (!calUrl) return;
+    try {
+      await navigator.clipboard.writeText(calUrl);
+      calCopy.textContent = '已复制';
+      setTimeout(() => { calCopy.textContent = '复制订阅地址'; }, 1500);
+    } catch {
+      const node = document.getElementById('calUrl');
+      const r = document.createRange();
+      r.selectNodeContents(node);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      calCopy.textContent = '已选中，长按复制';
+      setTimeout(() => { calCopy.textContent = '复制订阅地址'; }, 2500);
+    }
+  });
+}());
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>

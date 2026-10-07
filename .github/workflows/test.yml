@@ -1,0 +1,24 @@
+# 最低门槛：语法/未定义引用 + 保留下来的测试套件。
+#
+# ⚠️ 跑在 windows-latest 上：本项目就是在 Windows 上开发的，部分套件（路径、局域网地址、
+#    安卓工具链的探测）带 Windows 假设。想跑 Linux 的话请把下面的 runs-on 换成 ubuntu-latest，
+#    然后自己确认哪些套件需要跳过。
+name: test
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 最低门槛（语法 / 未定义引用）
+        run: node tools/js-preflight.mjs
+      - name: 测试
+        run: npm test

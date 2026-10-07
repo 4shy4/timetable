@@ -1,0 +1,32 @@
+// 安卓壳子的 Gradle 设置（Groovy DSL）。
+//
+// 目标：**不重写任何业务逻辑** —— core/ 与 web/ 原样打进 APK，
+// Kotlin 只做"外壳 + 本地存储 + 系统通知"。
+//
+// 仓库说明（都是实测过的）：
+//   · dl.google.com 与 repo.maven.apache.org 在这台机器上**通**（200）
+//   · 阿里云镜像也通，放前面图快
+//   · Gradle 发行版本身会 307 到 GitHub（不通），但我们**本地已经装了 8.14.3**，
+//     所以直接用本地 gradle，不走 wrapper 下载。
+pluginManagement {
+  repositories {
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+
+dependencyResolutionManagement {
+  repositories {
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    google()
+    mavenCentral()
+  }
+}
+
+rootProject.name = 'Timetable'
+include ':app'

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- 用系统自带的浅色底，界面全部由 WebView 里的网页负责 -->
+  <style name="Theme.Timetable" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <item name="android:windowBackground">#F5F6F8</item>
+    <item name="android:statusBarColor">#F5F6F8</item>
+    <item name="android:navigationBarColor">#F5F6F8</item>
+  </style>
+</resources>

@@ -1,0 +1,1043 @@
+/* ===== 视图样式 ===== */
+
+/* --- 通用卡片 --- */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--shadow);
+}
+
+/* --- 空状态 --- */
+.empty {
+  display: grid; place-items: center; gap: 10px;
+  padding: 56px 20px; text-align: center; color: var(--muted);
+}
+.empty .empty-ico { font-size: 34px; opacity: .5; }
+.empty h3 { color: var(--text); font-size: 15px; font-weight: 600; }
+
+/* ============ 月历 ============ */
+.month-head {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.month-head span { padding: 8px 0; text-align: center; font-size: 12px; color: var(--muted); }
+.month-head span.weekend { color: color-mix(in srgb, var(--muted) 70%, var(--danger)); }
+
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.month-cell {
+  min-height: 108px; padding: 6px 7px 7px;
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: background .12s;
+}
+.month-cell:nth-child(7n) { border-right: 0; }
+.month-cell:hover { background: var(--surface-2); }
+.month-cell.out { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.month-cell.out .daynum { opacity: .38; }
+.month-cell.today .daynum {
+  background: var(--brand); color: #fff; border-radius: 999px;
+  width: 22px; height: 22px; display: grid; place-items: center;
+}
+.month-cell .daynum { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.month-cell .cell-head { display: flex; align-items: center; justify-content: space-between; }
+.month-cell .cell-week { font-size: 10px; color: var(--muted); }
+
+.pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 2px 6px; margin-bottom: 3px;
+  border-radius: 5px; font-size: 11.5px; line-height: 1.45;
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+  color: color-mix(in srgb, var(--c) 78%, var(--text));
+  border-left: 2.5px solid var(--c);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pill .pill-time { font-variant-numeric: tabular-nums; opacity: .8; flex: none; }
+.pill .pill-title { overflow: hidden; text-overflow: ellipsis; }
+.pill.done { opacity: .45; text-decoration: line-through; }
+.more { font-size: 11px; color: var(--muted); padding-left: 4px; }
+
+@media (max-width: 799px) {
+  .month-cell { min-height: 74px; padding: 4px; }
+  .month-cell .cell-week { display: none; }
+  .pill { font-size: 10.5px; padding: 1px 4px; border-left-width: 2px; }
+  .pill .pill-time { display: none; }
+}
+
+/* ============ 清单 ============ */
+.list { display: flex; flex-direction: column; gap: 14px; }
+.list-group { display: flex; flex-direction: column; gap: 8px; }
+.list-group-head {
+  display: flex; align-items: baseline; gap: 8px; padding: 2px 4px;
+  position: sticky; top: 58px; background: var(--bg); z-index: 2;
+}
+.list-group-head h3 { font-size: 13px; font-weight: 650; }
+.list-group-head .count { font-size: 12px; color: var(--muted); }
+
+.row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); cursor: pointer;
+}
+.row:hover { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+.row .bar { width: 3px; align-self: stretch; border-radius: 3px; background: var(--c); flex: none; }
+.row .row-main { flex: 1; min-width: 0; }
+.row .row-title { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.row .row-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.row .row-time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); flex: none; }
+.row.done { opacity: .55; }
+.row.done .row-title { text-decoration: line-through; }
+
+.check {
+  width: 22px; height: 22px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--line); background: var(--surface);
+  display: grid; place-items: center; cursor: pointer; font-size: 12px; color: transparent;
+}
+.check:hover { border-color: var(--ok); }
+.check.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+/* ============ 课程表 ============ */
+.course-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.week-strip { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+.week-pill {
+  min-width: 38px; padding: 5px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); font-size: 12px; flex: none;
+}
+.week-pill[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* 「删除课程」对话框里的课程行（web/ui/views/course.js 的 openCourseManager）。
+   一行一门课、右边一个删除按钮 —— 整行**不做**点击（删除是慎重的动作，
+   所以不套用 .row 的 cursor/hover，免得看着像"点哪儿都能删"）。 */
+.course-del-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.course-del-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.course-del-row .cdr-main { flex: 1; min-width: 0; }
+.course-del-row .cdr-title { font-weight: 600; }
+.course-del-row .cdr-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/*
+ * ⚠️ 这里**不能**写 `overflow: hidden`。
+ *    sticky 在"被 overflow 裁剪的祖先"里会失效（官方规范：sticky 的约束矩形
+ *    被最近的可滚动祖先裁剪）。原来为了圆角写了 overflow: hidden，
+ *    结果表头和节次列怎么都贴不住（实测滚动后表头跑到 -629）。
+ *    圆角改由四个角的格子各自负责（见下面的 border-radius 规则）。
+ */
+.course-table { display: grid; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+
+/*
+ * 窄屏横向滑动。
+ *
+ * 课程表是 **7 天 + 周次列 + 节次列**，一共 9 列。实测每列宽度：
+ *   可用 800px → 每列约 95px（平板上勉强）
+ *   可用 600px → 每列约 65px（挤）
+ *   可用 360px → 每列约 30px（**完全没法用**，一个汉字都塞不下）
+ *
+ * 所以给表格一个 `min-width`，外面套一个横向滚动容器：
+ * 宽屏完全不受影响（表格撑满、不出现滚动条），窄屏手指左右滑。
+ * 这比"把 7 列压到 30px"有用得多。
+ *
+ * ⚠️ 滚动条只在真正需要时出现 —— 靠 `min-width` 而不是 `width`。
+ * ⚠️ 容器**只**设 overflow-x。设成 overflow:hidden / auto（两个方向）会让
+ *    sticky 表头失效（见下面 .course-table 那条注释里的实测）。
+ */
+.course-table-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  /* 让滚动区域不要贴着圆角，视觉上还是整块 */
+  border-radius: var(--r-lg);
+}
+.course-table { min-width: 720px; }
+/* 670px 以下（手机横屏/竖屏）每列再宽一点，滑起来能看清课名 */
+@media (max-width: 669px) {
+  .course-table { min-width: 640px; }
+}
+/*
+ * ⚠️ 用 `display: contents` 让"行"不产生自己的网格 ——
+ *    所有格子和课程块都是**同一个网格**的子元素。
+ *    这样课程块才能用 grid-row: span N 跨多行（第 1-2 节连成一块），
+ *    而不是被迫只画在一行里（用户报"1-2 节 8:00~9:35 为什么显示一节课"）。
+ */
+.ct-row { display: contents; }
+.ct-weeks, .ct-slot, .ct-cell { min-height: 62px; }
+
+/*
+ * 课程块 —— 整块上色的色块模式：
+ *   · 整块上色（不是白底加一条色线），面积大、一眼看到
+ *   · 课程名粗体；教师/地点/时间各占一行，前面带小图标
+ *   · 时间范围放最后一行
+ * 颜色由 JS 通过 --c 给（一门课一个色相），这样相邻课程不容易混淆。
+ */
+.ct-block {
+  margin: 3px; z-index: 1; overflow: hidden;
+  border-radius: 8px; padding: 7px 8px; font-size: 11.5px; line-height: 1.4;
+  /* 实心浅色底：比 color-mix 15% 更明显 */
+  background: var(--c);
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 1px;
+  transition: filter .12s;
+}
+.ct-block:hover { filter: brightness(1.06); }
+.ct-block b {
+  display: block; font-size: 12.5px; font-weight: 650; line-height: 1.3;
+  /* 名字最多两行，超出省略 —— 长课名（"习近平新时代中国特色社会主义思想概论"）不能撑破格子 */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* 教师 / 地点 / 时间：统一弱化一档，用半透明白保持可读 */
+.ct-block span {
+  display: block; font-size: 11px;
+  color: rgb(255 255 255 / 0.92);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 时间范围：紧跟课程名下方（这是最该一眼看到的信息）。
+ * 不用 margin-top:auto 把它推到底 —— 跨 2~3 行的块会中间空一大截，很难看。 */
+.ct-block .ct-time {
+  font-size: 11px; font-weight: 600;
+  color: rgb(255 255 255 / 0.95);
+  font-variant-numeric: tabular-nums;
+}
+/* 网格模板放在 .course-table 上（行不再自成网格，见 .ct-row 的 display:contents） */
+.course-table { grid-template-columns: 58px 64px repeat(7, minmax(0, 1fr)); }
+.ct-weeks {
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: 6px 2px; text-align: center; font-size: 10.5px; color: var(--muted);
+  background: var(--surface-2);
+}
+.ct-weeks b { display: block; font-size: 12px; color: var(--text); font-weight: 650; }
+.ct-head > div:nth-child(-n+2) { background: var(--surface-2); }
+.ct-head { background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.ct-head > div { padding: 8px 4px; text-align: center; font-size: 12px; color: var(--muted); border-right: 1px solid var(--line); }
+.ct-head > div:last-child { border-right: 0; }
+.ct-slot {
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: 6px 4px; text-align: center; font-size: 11px; color: var(--muted);
+}
+.ct-slot b { display: block; font-size: 13px; color: var(--text); }
+
+/*
+ * ⚠️ 表格很高（一学期 11 节 × 6 天，实测 2400px+），滚下去之后
+ *    **看不到这是星期几、第几节** —— 这正是用户说的"至少我不要滚动"。
+ *
+ * 解决：把"日期表头"和"节次/周次两列"钉住。
+ *   · 表头 sticky top:0 —— 页面滚动时它贴在顶部
+ *   · 左侧两列 sticky left —— 横向滚动（手机）时它们贴在左边
+ * 需要不透明背景，否则下面的内容会透出来。
+ */
+.ct-head { position: sticky; top: 0; z-index: 3; }
+.ct-head > div { background: var(--surface-2); }
+.ct-weeks, .ct-slot { position: sticky; z-index: 2; background: var(--surface-2); }
+.ct-weeks { left: 0; }
+.ct-slot { left: 58px; }
+/* 左上角那个格子要盖住两者，层级最高 */
+.ct-head > div:nth-child(-n+2) { position: sticky; z-index: 4; }
+.ct-head > div:nth-child(1) { left: 0; }
+.ct-head > div:nth-child(2) { left: 58px; }
+
+/* 圆角：原来靠 .course-table 的 overflow:hidden 实现，现在由四个角的格子负责 */
+.ct-head > div:first-child { border-top-left-radius: var(--r-lg); }
+.ct-head > div:last-child { border-top-right-radius: var(--r-lg); }
+.ct-row:last-child > .ct-weeks { border-bottom-left-radius: var(--r-lg); }
+.ct-row:last-child > *:last-child { border-bottom-right-radius: var(--r-lg); }
+
+.ct-cell {
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  min-height: 62px; padding: 5px; position: relative;
+}
+.ct-cell:last-child { border-right: 0; }
+.ct-course {
+  border-radius: 6px; padding: 5px 6px; font-size: 11.5px; line-height: 1.35; height: 100%;
+  background: color-mix(in srgb, var(--c) 15%, var(--surface));
+  border-left: 3px solid var(--c); cursor: pointer;
+}
+.ct-course b { display: block; font-size: 12px; }
+.ct-course span { color: var(--muted); display: block; }
+
+/* ============ 导入 / 设置 ============ */
+.panel { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { font-size: 15px; font-weight: 650; }
+.panel h3 { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.switch-row:last-child { border-bottom: 0; }
+
+/*
+ * 气泡面板里的"显示课程"开关：`.switch-row` 是给设置页写的
+ * （11px 竖内边距 + 底边框），放进说明面板太松，这里收紧。
+ * 注意全局 `label { display:block }` 会带来额外的下标偏移，
+ * 所以用 align-items: center 拉平。
+ */
+.bubble-course-toggle {
+  padding: 6px 0; border-bottom: 0;
+  font-size: 12.5px; color: var(--text); cursor: pointer;
+}
+.bubble-course-toggle input { margin: 0; cursor: pointer; }
+.switch-row .sr-text b { display: block; font-size: 13.5px; font-weight: 600; }
+.switch-row .sr-text small { color: var(--muted); font-size: 12px; }
+
+.switch { position: relative; width: 46px; height: 26px; flex: none; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch .track {
+  position: absolute; inset: 0; border-radius: 999px; background: var(--line);
+  transition: background .18s; pointer-events: none;
+}
+.switch .track::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  transition: transform .18s;
+}
+.switch input:checked + .track { background: var(--brand); }
+.switch input:checked + .track::after { transform: translateX(20px); }
+
+.import-report { border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; background: var(--surface-2); font-size: 13px; }
+.import-report ul { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.import-report li { color: var(--warn); font-size: 12px; }
+textarea.code { font-family: ui-monospace, Consolas, "Cascadia Mono", monospace; font-size: 12.5px; min-height: 220px; }
+
+/* ============ 气泡浮动视图（主界面）============
+   设计目标：气泡区占满整屏，操作台收进"第二级"（点按钮才弹出）。
+   这样手机上能用的高度从约 370px 提升到约 700px，气泡才铺得开、
+   不会被挤成一团、也不会被边缘裁掉。 */
+
+.bubble-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/**
+ * ⚠️⚠️ 气泡区**禁止选中文本、禁止 iOS 长按菜单** —— 这不是讲究，是必须的。
+ *
+ * 为什么（用户实测报的）：
+ *   "长按 2.5 秒戳破泡泡"是本应用的核心手势之一，而
+ *   **iOS 上长按默认是"选中文本 / 弹拷贝菜单"** —— 两者是同一个手势，必然打架。
+ *   被抢走后的表现：长按带着偏移 → 整个气泡区被选中 → 焦点跑掉 →
+ *   **之后再怎么点都点不动泡泡**（得先点别处才能恢复）。
+ *
+ * 注意：`.bubble-canvas` 上已有的 `touch-action: none` **挡不住这个** ——
+ *   它管的是滚动/缩放/双击放大，管不着文字选择。必须用 user-select。
+ *
+ * `-webkit-touch-callout: none` 是 iOS 专有的那条，它才是关掉"拷贝/查找"菜单的开关；
+ * 只写 user-select 在 iOS 上仍可能弹菜单。
+ *
+ * 输入控件要**恢复**可选（气泡面板里有复选框），否则触屏上勾选框都不好点。
+ */
+.bubble-wrap,
+.bubble-stage,
+.bubble-canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.bubble-wrap input,
+.bubble-wrap textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/**
+ * ⚠️⚠️ `touch-action` 必须**逐层写**（不能只写 `.bubble-canvas`）。
+ *
+ * 为什么（用户报的"长按 2.5 秒无响应"这条链上的一个真隐患）：
+ *   `touch-action` **不继承**，浏览器判定一次触摸时看的是
+ *   "目标元素到它最近的可滚动祖先"这条链上的**交集**：
+ *     · 只要链上**任何一层**允许 pan/zoom（默认就是 auto），
+ *       iOS 就可能把这次触摸判成"想滚动/缩放"，
+ *     · 于是长按到一半收到 `pointercancel` —— 指针序列被掐断，
+ *       2.5 秒的计时器**永远等不到 pointerup 也不会走完**，
+ *     · 而且 `pointermove` 也可能根本收不到（判成滚动手势后事件被系统吃掉）。
+ *   画布上原来只写了一句 `touch-action: none` —— 它挡得住"画布自己这一层"，
+ *   挡不住祖先链上任何一层的默认 auto。
+ *
+ * 所以这里把**整条祖先链**都钉成 none：
+ *   .app → .main → .content(view-host) → .bubble-wrap → .bubble-stage → .bubble-canvas
+ * 副作用是这一整块区域不再接受滚动/双指缩放 —— 这正是我们要的：
+ * 气泡区是**全屏可拖动的工作台**，它上面本来就没有可滚动的内容
+ * （面板 `.bubble-panel` 自己会滚动，见下面的 `touch-action: auto` 恢复）。
+ *
+ * `user-select` / `-webkit-touch-callout` 同理逐层写：iOS 上"选中文本/弹拷贝菜单"
+ * 和"长按"是**同一个手势**，只要有一层漏了就可能把长按抢走（抢走之后焦点跑掉，
+ * 表现是"之后再怎么点都点不动泡泡"）。
+ */
+.app.view-bubble,
+.app.view-bubble .main,
+.app.view-bubble .content,
+.bubble-wrap,
+.bubble-stage,
+.bubble-canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* 面板里是有可滚动/可选中内容的（设置项、说明文字）—— 在这一层恢复，
+   否则用户没法滚动说明、也没法选中里面的文字。画布层不受影响。 */
+.bubble-panel {
+  touch-action: auto;
+}
+.bubble-panel,
+.bubble-panel input,
+.bubble-panel textarea,
+.bubble-panel select {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/**
+ * 画布容器：**铺满右侧**（用户要求）。
+ *
+ * 之前是 `height: calc(100dvh - 210px)` 这种"估着减"的写法，右侧永远留一条边。
+ * 现在改成靠 flex 链条撑满：content(flex:1) → bubble-wrap(flex:1) → stage(flex:1)，
+ * 配合 layout.css 里 `.app.view-bubble .content` 去掉内边距，就能真正贴边。
+ * 还留一个 min-height 兜底，避免窗口极矮时被压成一条线。
+ */
+.bubble-stage {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--brand) 7%, transparent), transparent 70%),
+    var(--surface);
+}
+.bubble-canvas { display: block; position: absolute; inset: 0; cursor: grab; touch-action: none; }
+.bubble-canvas.grabbing { cursor: grabbing; }
+
+/**
+ * 单击背景的即时反馈涟漪（见 bubble.js 里 tapRipple 的说明）。
+ *
+ * 关键：`pointer-events: none` —— 它盖在画布上，绝不能把后续的手势吃掉
+ * （否则"为了让用户看到反应"的装饰会把真正的点击挡住，变成更糟的 bug）。
+ * 默认 opacity: 0，只有加上 .on 才播一次动画，播完自己回到 0。
+ */
+.bubble-tap-ripple {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--brand) 70%, transparent);
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.bubble-tap-ripple.on { animation: bubble-tap-ripple 420ms ease-out; }
+@keyframes bubble-tap-ripple {
+  0% { opacity: .85; transform: scale(.45); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/**
+ * 长按被**系统打断**时的一句话（平时 hidden）。
+ *
+ * ⚠️ 为什么必须有：被系统打断（第二根手指、系统长按菜单、切到后台）时，
+ *   用户看到的和"完全没按到"**一模一样** —— 都是什么都不发生。
+ *   平板上没有控制台，界面自己说话是唯一的诊断手段。
+ *   `pointer-events: none` 是硬要求：它是**提示**，绝不能把后续手势吃掉
+ *   （否则"为了解释为什么没反应"反而制造了新的没反应）。
+ */
+.bubble-hold-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: min(86%, 420px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, #000 12%);
+  border: 1px solid var(--line);
+  color: var(--text-dim, #64748b);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/**
+ * 手势诊断角标（默认关闭；`?diag=1` 或「?」面板里的开关打开）。
+ * 见 `web/ui/bubble-diag.js` 文件头：平板上没有控制台，长按没反应时
+ * "原始事件到底有没有到"只能让屏幕自己说出来。
+ *
+ * ⚠️⚠️ `pointer-events: none` 是**硬要求**：它是诊断器，绝不能把长按手势吃掉 ——
+ *    否则"为了看清为什么没反应"反而制造了一个新的没反应，那是最糟的结果。
+ *    这条和 `.bubble-tap-ripple` / `.bubble-hold-hint` 是同一条规矩。
+ * ⚠️ 位置放**左下角**：那里既没有 HUD（左上）、也没有"被系统打断"的提示条（底部居中）、
+ *    也没有操作面板（底部整条，但它是 hidden 的）。角标不许盖住任何一个操作入口。
+ * ⚠️ `z-index: 4`：低于操作面板(5)，高于提示条(3)和信息条(2) —— 面板一开就该盖住角标。
+ */
+.bubble-diag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 4;
+  max-width: calc(100% - 16px);
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, #000 8%);
+  border: 1px solid var(--line);
+  color: var(--text-dim, #64748b);
+  font: 11px/1.45 ui-monospace, Consolas, "Cascadia Mono", monospace;
+  /* 那一行会很长（touch 通道有数时多一格）—— 让它自己换行，绝不撑破画布 */
+  white-space: pre-wrap;
+  word-break: break-all;
+  pointer-events: none;
+}
+/* ⚠️ 这一行不能省：本项目已经在 `.bubble-hud-chip` / `.bubble-inside-hint` 上
+   踩过"display 盖过 [hidden] → 留下一个空盒子"的坑（见上面那两条注释）。 */
+.bubble-diag[hidden] { display: none; }
+
+/* 进入气泡后：画布背景变成"容器颜色"的柔光，表示我们在它里面（套娃）。
+   --bubble-inside-color 由 bubble.js 按容器档位写入。 */
+.bubble-stage.bubble-inside {
+  border-color: color-mix(in srgb, var(--bubble-inside-color, var(--brand)) 45%, var(--line));
+  background:
+    radial-gradient(90% 70% at 50% 12%,
+      color-mix(in srgb, var(--bubble-inside-color, var(--brand)) 26%, transparent),
+      transparent 72%),
+    radial-gradient(120% 100% at 50% 110%,
+      color-mix(in srgb, var(--bubble-inside-color, var(--brand)) 14%, transparent),
+      transparent 70%),
+    color-mix(in srgb, var(--bubble-inside-color, var(--brand)) 6%, var(--surface));
+  transition: background 420ms ease, border-color 420ms ease;
+}
+/* 进入动画：先"涨大 + 虚化"一下，像是穿过泡壁进去的 */
+@keyframes bubble-enter-pop {
+  0% { transform: scale(1.06); filter: blur(6px); opacity: .55; }
+  100% { transform: scale(1); filter: blur(0); opacity: 1; }
+}
+/* ===== 月历：左侧日历 + 右侧"选中那天的详细列表" =====
+   窄屏（手机）时右侧面板落到下面，不然日历会被挤得没法看。 */
+.month-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+@media (max-width: 1080px) { .month-layout { grid-template-columns: 1fr; } }
+.month-side { max-height: 72vh; display: flex; flex-direction: column; }
+@media (max-width: 1080px) { .month-side { max-height: none; } }
+
+.month-detail { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.month-detail-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.month-detail-head b { font-size: 15px; font-weight: 650; }
+.month-detail-head .tiny { display: block; color: var(--muted); font-size: 11.5px; }
+.month-detail-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
+.month-detail-item {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 8px 9px; border-radius: var(--r-sm); cursor: pointer;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--c, var(--brand));
+  background: var(--surface);
+}
+.month-detail-item:hover { background: var(--surface-2); }
+.mdi-time { display: flex; flex-direction: column; align-items: flex-end; min-width: 42px; flex: none; }
+.mdi-time b { font-size: 13px; font-weight: 650; }
+.mdi-time span { font-size: 10.5px; color: var(--muted); }
+.mdi-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mdi-title { font-size: 13.5px; font-weight: 600; word-break: break-word; }
+.mdi-notes {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
+}
+.mdi-done { font-size: 10.5px; color: var(--muted); flex: none; }
+.month-detail-empty { color: var(--muted); padding: 12px 2px; line-height: 1.5; }
+
+/* 日历格子里"当前查看"的那天 */
+.month-cell.selected { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 55%, transparent); }
+
+.bubble-stage.bubble-inside .bubble-canvas,
+.bubble-stage.bubble-enter .bubble-canvas {
+  animation: bubble-enter-pop 420ms cubic-bezier(.22,.9,.3,1) both;
+}
+
+/* 母气泡过期时，里面也是紫色调（子泡泡会跟着一起变紫） */
+.bubble-stage.bubble-inside.bubble-inside-overdue {
+  border-color: color-mix(in srgb, var(--bubble-inside-color) 65%, var(--line));
+  border-style: dashed;
+}
+
+/* 进了容器但里面还是空的：明说"点背景加东西"，
+   否则一片空画布会让人以为进错了或卡住了 */
+.bubble-inside-hint {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; pointer-events: none; padding: 16px;
+  color: color-mix(in srgb, var(--bubble-inside-color, var(--text)) 55%, var(--text-2));
+}
+.bubble-inside-hint[hidden] { display: none; }
+.bubble-inside-hint strong { font-size: 17px; font-weight: 650; }
+.bubble-inside-hint span { font-size: 13px; opacity: .85; }
+.bubble-inside-hint-key {
+  margin-top: 6px; font-size: 12px !important;
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--bubble-inside-color, var(--line)) 50%, var(--line));
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+/* 浮在画布上的极简信息条：只显示"点了哪个气泡"，不占版面 */
+.bubble-hud {
+  position: absolute; left: 10px; top: 10px; right: 10px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  pointer-events: none; z-index: 3;
+}
+.bubble-hud > * { pointer-events: auto; }
+.bubble-hud-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px; font-size: 12.5px;
+  /* 不透明度偏高：气泡会从下面经过，太透会看不清 HUD */
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line); backdrop-filter: blur(10px);
+  box-shadow: 0 1px 4px rgba(16, 24, 40, .12);
+}
+.bubble-hud-chip b { font-weight: 650; }
+.bubble-hud-chip.muted { color: var(--muted); }
+/**
+ * ⚠️ 这一行不能省：`.bubble-hud-chip` 上是 `display: inline-flex`，
+ * 它会**盖过** `[hidden]` 自带的 `display: none` —— 于是"藏起来"的那格
+ * 仍然画成一个**空的白色小胶囊**（用户截图里左上角那个就是它）。
+ * 这个坑本项目在 `.bubble-inside-hint` 上已经踩过一次。
+ */
+.bubble-hud-chip[hidden] { display: none; }
+
+/* 第二级：操作面板（点按钮才出现，浮在画布下方或弹出） */
+.bubble-panel {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: 0 -8px 30px -12px rgba(0, 0, 0, .25);
+  max-height: 62%;
+  overflow-y: auto;
+  animation: bubblePanelUp .18s ease-out;
+}
+.bubble-panel[hidden] { display: none; }
+@keyframes bubblePanelUp { from { transform: translateY(14px); opacity: .5; } }
+
+/* 说明面板（点 HUD 上的 ? 才出现）——内容偏"读"，所以版式比原操作面板宽松些 */
+.bubble-help { gap: 10px; }
+.bubble-panel-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bubble-panel-row .spacer { flex: 1; }
+.bubble-tool-label { font-size: 12px; color: var(--muted); }
+/* 「时间范围」旁边那个可自填天数的输入框（用户要的"除了 3/7/14/30 还能自调"）。
+   宽度只留三位数，和分段按钮排在一行不挤。 */
+.bubble-horizon-input {
+  width: 62px; padding: 4px 6px; font-size: 12.5px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text);
+}
+/* 节日背景图那一行：下拉 + 两个按钮 + 状态文字，窄屏要能换行（平板竖屏也在意） */
+.bubble-art-row { flex-wrap: wrap; gap: 6px 8px; }
+.bubble-art-select {
+  padding: 4px 6px; font-size: 12.5px; max-width: 46vw;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text);
+}
+.bubble-art-status { font-size: 12px; color: var(--text-2); }
+.bubble-art-preview { border-radius: 50%; flex: none; }
+.bubble-help-head { display: flex; flex-direction: column; gap: 2px; }
+.bubble-help-head strong { font-size: 14px; font-weight: 650; }
+.bubble-help-title {
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+  margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line);
+}
+.bubble-help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; }
+@media (max-width: 560px) { .bubble-help-grid { grid-template-columns: 1fr; gap: 2px 0; } }
+.bubble-help-line { display: contents; }
+@media (max-width: 560px) { .bubble-help-line { display: block; margin-bottom: 6px; } }
+.bubble-help-key {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.bubble-help-key i {
+  width: 12px; height: 12px; border-radius: 4px; display: inline-block; flex: none;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.bubble-help-desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+/* 自定义课程对话框的字段（课程名/代码/地点/老师…） */
+.custom-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.custom-field > span:first-child { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.custom-field .tiny { font-size: 11.5px; color: var(--muted); }
+/* 输入框占满自己的那一格；但"从…到…"这一行要横向排，别各占一整行 */
+.custom-field > input, .custom-field > select { width: 100%; }
+.custom-field .deadline-units { flex-wrap: wrap; }
+.custom-field .deadline-units > select { flex: 1 1 180px; min-width: 0; width: auto; }
+/* 星期几的单选：复用 .chip 样式，选中的加重 */
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-row .chip[aria-pressed="true"] {
+  border-width: 2px; font-weight: 650;
+  border-color: color-mix(in srgb, var(--brand) 60%, var(--line));
+  background: var(--brand-soft);
+}
+pre.code-block {
+  margin: 0; padding: 8px 10px; border-radius: var(--r-sm);
+  background: var(--surface-2, color-mix(in srgb, var(--line) 25%, transparent));
+  font-family: ui-monospace, Consolas, monospace; font-size: 12.5px;
+  overflow-x: auto;
+}
+
+/* 颜色（事情多大）选择：一个圆点 + 一个词 */
+.bubble-level-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.level-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px; font-size: 12.5px;
+}
+.level-chip i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.level-chip[aria-pressed="true"] { border-color: currentColor; font-weight: 650; }
+.level-chip[disabled] { opacity: .38; cursor: not-allowed; }
+
+/* ---- 截止时间输入 ---- */
+.deadline-field { display: flex; flex-direction: column; gap: 8px; }
+.deadline-units { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.deadline-unit { display: flex; align-items: center; gap: 4px; }
+.deadline-unit .tiny { color: var(--muted); }
+.deadline-preview {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 8px; border-radius: var(--r-sm, 10px);
+  background: color-mix(in srgb, var(--brand) 7%, transparent);
+}
+.deadline-preview .chip { font-size: 12.5px; }
+
+.bubble-legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-2, var(--surface));
+}
+.bubble-legend-block { display: flex; flex-direction: column; gap: 6px; }
+
+/* 气泡调试信息（仅在 ?debug=1 时插入）*/
+.bubble-debug {
+  position: absolute; left: 4px; right: 4px; bottom: 4px;
+  font: 11px/1.35 ui-monospace, Consolas, monospace;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  padding: 4px 6px; border-radius: 6px; pointer-events: none;
+  white-space: normal; word-break: break-all;
+}
+
+/* 设置页里的二维码 */
+.settings-qr {
+  width: min(200px, 55vw); padding: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.settings-qr svg { width: 100%; height: auto; display: block; }
+
+/* 大小滑动条（气泡工具栏 / 事件编辑器共用） */
+.bubble-size-row { gap: 10px; }
+.bubble-pick-label {
+  font-size: 12.5px; font-weight: 600; max-width: 180px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bubble-slider {
+  flex: 1; min-width: 160px; max-width: 420px;
+  height: 26px; padding: 0; min-height: 26px;
+  background: transparent; border: 0; box-shadow: none;
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+}
+.bubble-slider:disabled { opacity: .45; cursor: not-allowed; }
+.bubble-slider::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #22c55e 42%, #f5b301 72%, #ef4444);
+}
+.bubble-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -7px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+.bubble-slider::-moz-range-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #22c55e 42%, #f5b301 72%, #ef4444);
+}
+.bubble-slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--text);
+}
+.bubble-size-value {
+  min-width: 34px; text-align: center; font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bubble-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.bubble-presets button { cursor: pointer; }
+.bubble-legend-intensity { font-size: 9px; letter-spacing: -2px; opacity: .75; }
+
+/* 大小滑动条（事件编辑器内） */
+.magnitude-field { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.magnitude-field .bubble-slider { max-width: none; }
+
+/* 紧急度分档说明 */
+.tier-list { display: flex; flex-direction: column; gap: 8px; }
+.tier-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.tier-row i { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.tier-row b { min-width: 42px; }
+.tier-row small { color: var(--muted); }
+
+.bubble-legend-title { font-size: 11.5px; color: var(--muted); }
+.bubble-legend-ramp { display: flex; gap: 10px; flex-wrap: wrap; }
+.bubble-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.bubble-legend-item i { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
+.bubble-size-demo { display: flex; align-items: center; gap: 14px; }
+.bubble-size-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.bubble-size-item i {
+  display: inline-block; border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+/* 量级选择器（事件编辑器内） */
+.importance-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.importance-picker button {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); font-size: 12.5px;
+}
+.importance-picker button i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.importance-picker button[aria-pressed="true"] { border-width: 2px; font-weight: 600; }
+
+@media (max-width: 799px) {
+  /* 手机上让气泡区尽量占满：只剩压扁后的顶栏和底部标签栏 */
+  .bubble-stage { height: calc(100dvh - var(--tabbar-h) - 150px); min-height: 320px; }
+  .bubble-legend { gap: 12px; padding: 8px 10px; }
+  .bubble-panel { max-height: 72%; }
+}
+
+/* ============ 弹窗 ============ */
+.modal-host { position: fixed; inset: 0; z-index: 60; }
+.modal-host[hidden] { display: none; }
+.modal-mask { position: absolute; inset: 0; background: rgba(15, 17, 21, .42); backdrop-filter: blur(2px); }
+.modal {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px)); max-height: min(84vh, 820px);
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .4);
+  overflow: hidden;
+  animation: pop .16s ease-out;
+}
+@keyframes pop { from { opacity: 0; transform: translate(-50%, -48%) scale(.98); } }
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+}
+.modal-head h2 { font-size: 15px; font-weight: 650; }
+.modal-body { padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.modal-foot {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid var(--line); background: var(--surface-2);
+}
+.modal-foot .spacer { flex: 1; }
+
+@media (max-width: 799px) {
+  .modal {
+    left: 0; right: 0; bottom: 0; top: auto; transform: none;
+    width: 100%; max-height: 90vh; border-radius: var(--r-lg) var(--r-lg) 0 0;
+    animation: sheet .2s ease-out;
+  }
+  @keyframes sheet { from { transform: translateY(12px); opacity: .6; } }
+  .modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
+
+/* ============ Toast ============ */
+.toast-host {
+  position: fixed; z-index: 80;
+  right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px;
+  max-width: min(380px, calc(100vw - 36px));
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 14px; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .35);
+  animation: slide .2s ease-out;
+}
+@keyframes slide { from { opacity: 0; transform: translateY(8px); } }
+.toast.alert { border-left: 3px solid var(--brand); }
+.toast.ok { border-left: 3px solid var(--ok); }
+.toast.err { border-left: 3px solid var(--danger); }
+.toast b { display: block; font-size: 13.5px; }
+.toast small { color: var(--muted); font-size: 12px; }
+.toast .t-close { border: 0; background: transparent; cursor: pointer; color: var(--muted); padding: 0 2px; }
+
+@media (max-width: 799px) {
+  .toast-host { left: 12px; right: 12px; bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); max-width: none; }
+}
+
+/* ===========================================================================
+   回收气泡站（单独标签页）
+   ---------------------------------------------------------------------------
+   用户要求："气泡破裂后保存为气泡站中的历史，此区域泡泡不再浮动，
+             被嵌入界面即可，且泡泡保留外观"、"破裂泡泡大小统一但要保存其破裂时剩余的时间"
+   =========================================================================== */
+
+.recycle-wrap { display: flex; flex-direction: column; gap: 14px; }
+.recycle-head { display: flex; flex-direction: column; gap: 4px; }
+.recycle-head h3 { font-size: 14px; font-weight: 650; }
+.recycle-head .tiny { color: var(--muted); }
+
+/* ---- 布局 ①：列表式（按破裂时间排布，从左到右、从上到下）---- */
+/* 用 auto-fill 网格：列数随宽度自适应，"从左到右、从上到下"正好是 DOM 顺序 */
+.recycle-grid {
+  display: grid; gap: 16px 14px;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  align-items: start; justify-items: center;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); padding: 16px 14px;
+}
+
+/* ---- 布局 ②：螺旋式 ---- */
+.recycle-spiral { position: relative; overflow: hidden; border-radius: var(--r-md); }
+/* 层是绝对定位 + 自身 transform 居中缩放；不要用 inset:0（那会把它撑满、丢掉固有尺寸）*/
+.recycle-spiral-layer { position: absolute; }
+.recycle-spiral-hint {
+  position: absolute; left: 12px; bottom: 8px;
+  font-size: 11.5px; color: var(--muted); pointer-events: none;
+}
+
+/* ---- 方块本体（两种布局共用 → 保证"保留外观 + 大小统一"）----
+ *
+ * ⚠️ 形状是**圆角方块**，不是圆泡泡 —— 我第一版做成了 `border-radius: 50%`，
+ *    但用户画的草图里方块是方的（方块里写编号）。已按图改回方块。
+ *    名字仍用 recycle-block（"泡泡"这个叫法在界面文案里还在用）。
+ */
+.recycle-item { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; }
+.recycle-block {
+  /* --c 由 JS 按等级给色；宽高由 JS 统一给（保证"大小统一"）*/
+  border-radius: 10px;
+  /* 角标（×N）相对方块定位，所以必须是 relative；
+     overflow 不能是 hidden，否则角标会被裁掉 —— 名称的省略交给 -webkit-line-clamp。 */
+  position: relative;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 86%, #fff), var(--c) 62%);
+  border: 2px solid color-mix(in srgb, var(--c) 60%, #000);
+  box-shadow: 0 2px 6px rgb(0 0 0 / .14);
+  display: grid; place-items: center; padding: 6px 7px;
+  cursor: pointer; transition: transform .12s;
+}
+.recycle-block:hover { transform: scale(1.05); }
+.recycle-block-name {
+  font-size: 11px; line-height: 1.25; text-align: center; color: #fff;
+  font-weight: 650; text-shadow: 0 1px 2px rgb(0 0 0 / .35);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-word;
+}
+/* 事件合并的角标：这条事件一共被戳破几次 */
+.recycle-block-count {
+  position: absolute; right: -5px; top: -6px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: 9px;
+  font-size: 10px; font-weight: 700; padding: 0 5px; line-height: 15px;
+}
+/* 每颗单独还原 */
+.recycle-restore {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2);
+  color: var(--muted); font-size: 12px; padding: 1px 7px; cursor: pointer;
+}
+.recycle-restore:hover { color: var(--brand); border-color: var(--brand); }
+/* 破裂时剩余时间：负号 = 提前完成，正号 = 拖延（用户指定的记号）*/
+.recycle-badge {
+  font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.recycle-badge.early { color: var(--ok); }        /* 提前完成：好事 */
+.recycle-badge.late  { color: var(--warn); }      /* 拖延：提醒一下 */
+.recycle-when { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* ===== 月历上的节日与农历（用户要求"月历里载入节日"）=====
+   ⚠️ 节日用**专用红**，和气泡区那颗节日泡泡是同一个颜色（core/holidays.js 的 FESTIVAL_COLORS）*/
+.month-cell .cell-lunar { font-size: 10px; color: var(--muted); margin-left: auto; }
+.month-cell .cell-festival {
+  font-size: 11px; font-weight: 600; color: #e03a3a;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.month-cell.has-festival { box-shadow: inset 0 0 0 1px color-mix(in srgb, #e03a3a 35%, transparent); }
+.month-cell.has-festival .daynum { color: #e03a3a; }
+
+/* ---------------------------------------------------------------------------
+   「闹钟」板块（web/ui/views/alarms.js）
+
+   ⚠️ 只在 iOS 壳里出现（门控在视图里），但样式放在这儿是**无害**的：
+      类名都带 `al-` 前缀，别的视图不会撞上；而且 CSS 不能按设备条件加载
+      （Service Worker 预缓存的是整份 views.css）。
+   --------------------------------------------------------------------------- */
+.alarms-page { display: flex; flex-direction: column; gap: 18px; padding: 4px 2px 40px; }
+
+.al-block {
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.al-block-head h3 { font-size: 14px; font-weight: 650; margin: 0 0 2px; }
+.al-block-head .tiny { margin: 0; }
+
+.al-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.al-field { display: flex; flex-direction: column; gap: 4px; }
+.al-field.al-grow { flex: 1; min-width: 160px; }
+.al-lbl { font-size: 12px; color: var(--muted); }
+.al-hint { font-size: 12px; color: var(--muted); align-self: center; }
+.al-colon { font-size: 18px; color: var(--muted); align-self: center; }
+
+.al-input {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--bg); color: inherit; font-size: 14px; min-width: 0;
+}
+.al-input-sm { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.al-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.al-weekdays { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* 计时器大字：一整块里最显眼的东西（用户瞄一眼就要知道还剩多久） */
+.al-timer-big {
+  font-size: 52px; font-weight: 700; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums; line-height: 1.1; text-align: center;
+  padding: 6px 0 0;
+}
+.al-timer-sub { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+.al-list { display: flex; flex-direction: column; gap: 8px; }
+.al-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--bg);
+}
+/* 关掉的那条要**一眼看出来是关的**（否则开着的和关着的长得一样） */
+.al-item.is-off { opacity: .55; }
+.al-item-main { flex: 1; min-width: 0; cursor: pointer; }
+.al-item-title { font-weight: 600; font-size: 15px; }
+.al-item-sub { font-size: 12px; color: var(--muted); margin-top: 2px; word-break: break-all; }
+
+.al-switch {
+  flex: none; width: 46px; height: 28px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  font-size: 12px; cursor: pointer;
+}
+.al-switch.on {
+  background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 650;
+}
+
+.al-sounds { display: flex; flex-direction: column; gap: 8px; }
+.al-sound {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--bg);
+}
+.al-sound-main { flex: 1; min-width: 0; }
+
+/* 诊断区：等宽字体 + 可横向滚动（id 很长，不能换行换得看不懂） */
+.al-diag {
+  margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--bg); font-size: 12px; line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap; word-break: break-all; overflow-x: auto;
+}
+.al-foot { color: var(--muted); }
