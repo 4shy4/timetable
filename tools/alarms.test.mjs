@@ -80,8 +80,15 @@ test('归一化：传了 now 就绝不许偷偷用真实时钟', () => {
   // ⚠️ 这条是**真抓过一次 bug 的**：原来写的是 `asDate(now || new Date())`，
   //    而 `asDate(undefined)` 会掉回真实时钟 —— 于是同一个 fixture 隔天就红。
   const a = normalizeAlarm({ kind: 'clock', atHour: 7 }, NOW);
-  assert.ok(a.createdAt.startsWith('2026-03-01T22:30'),
-    `createdAt 应当来自 NOW（UTC+8 的 2026-03-02T06:30），实际=${a.createdAt}`);
+  // ⚠️ 这里**不能**拿一个写死的字符串去比（原来写的是
+  //    `assert.ok(a.createdAt.startsWith('2026-03-01T22:30'))`）：
+  //    `NOW` 是"本地时间 2026-03-02 06:30"（下面那行的字符串没有 Z ⇒ 按**本地时区**解析），
+  //    只有在 UTC+8 的机器上它才等于 `2026-03-01T22:30Z`；到了 UTC 的 CI 机器上恒红
+  //    （2026-10-07 公开仓库第一次 CI 就是这么红的：实际值 `2026-03-02T06:30:00.000Z`）。
+  //    这条断言真正要保证的是"时间戳来自 NOW、不是偷偷用真实时钟"，那是**时刻**层面的
+  //    比较，跟时区无关 ⇒ 比毫秒数。
+  assert.equal(new Date(a.createdAt).getTime(), NOW.getTime(),
+    `createdAt 应当来自 NOW（${NOW.toISOString()}），实际=${a.createdAt}`);
   // 幂等：再归一化一次不许改任何时间戳
   const b = normalizeAlarm(a, NOW);
   assert.equal(b.createdAt, a.createdAt);

@@ -21,7 +21,13 @@ test('依赖图里所有模块都能被解析（没有断掉的 import）', () =
 
 test('sw.js 的 SHELL 清单与依赖图同步', () => {
   const { urls } = collectShell();
-  const sw = fs.readFileSync(SW, 'utf8');
+  // ⚠️ 读进来先把行尾归一成 LF 再比。
+  //    为什么：GitHub 的 windows runner 用 core.autocrlf=true 检出，`web/sw.js`
+  //    在那边是 CRLF，而 `renderShellArray()` 生成的是 LF ⇒ `includes()` 恒 false，
+  //    报出来却是「漏了 0 个 / 多了 0 个」这种**看不出原因**的假红
+  //    （2026-10-07 公开仓库第一次 CI 就撞上这条，本机永远复现不了）。
+  //    行尾不是这份清单要保证的东西，别让它决定测试的红绿。
+  const sw = fs.readFileSync(SW, 'utf8').replace(/\r\n/g, '\n');
   const want = renderShellArray(urls);
   if (!sw.includes(want)) {
     // 给出可操作的差异，而不是只说"不一样"
