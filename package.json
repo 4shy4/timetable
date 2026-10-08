@@ -1,6 +1,6 @@
 {
   "name": "timetable",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "private": true,
   "type": "module",
   "description": "本地优先的日程表 / 课表应用（零依赖，手机与电脑通用，气泡浮动主界面）",

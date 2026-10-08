@@ -370,7 +370,16 @@
 //        （摘要就是从那两份文档生成的常量）。重新生成后本文件在预缓存清单里，所以升版本号。
 //        ⚠️ 摘要现在 **2494/2500 字**，已经贴着上限 —— 下次再改 `docs/CHANGELOG.md`
 //        大概率会把老条目挤掉（截断），要么提高 `AI_DIGEST_LIMIT`，要么先精简 `docs/WHY.md`。
-const CACHE = 'timetable-shell-v50';
+// v50 → v51（2026-10-08）：**修掉二维码「格式信息」行列写反**（`core/qrcode.js`）。
+//        ① 症状：应用里「手机扫码打开电脑这一份」生成的二维码，真手机与 OpenCV **一个都扫不出来**；
+//           根因是 `placeFormat()` / `readFormat()` 把 nayuki 参考实现的 `setFunctionModule(x, y)`
+//           （x 是**列**）当成了 `m[row][col]` ⇒ 行列对调（两份副本都写反）。
+//        ② 为什么四周测试全绿：自检解码器 `decodeQrMatrix()` 与编码器**共享同一处假设** ⇒
+//           "编码→解码"往返自检必然成立。现在把**外部参照**（Python `qrcode` 库生成的矩阵，
+//           `tools/fixtures/qr-reference.json`）钉进 `tools/qrcode.test.mjs`，并给 `makeQrMatrix`
+//           加了 `mask` 逃生口（要跟别的实现逐格对表就得先钉死掩码）。
+//        ③ 同时 `core/defaults.js` 的 `APP_VERSION` 升到 0.12.1（发版一起改，见那里的注释）。
+const CACHE = 'timetable-shell-v51';
 const SHELL = [
   '/adapter/alarms.js',
   '/adapter/api-local.js',

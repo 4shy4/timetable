@@ -34,7 +34,7 @@ import { BUBBLE_VIEW_DEFAULTS } from './bubble-select.js';
 // ⚠️ 发版时一起改：package.json 的 `version`、这里、`android/app/build.gradle`
 //    的 `versionName`、`ios/project.yml` 的 `MARKETING_VERSION`。
 //    `tools/defaults.test.mjs` 会断言这里与 package.json 一致（漂移就红）。
-export const APP_VERSION = '0.12.0';
+export const APP_VERSION = '0.12.1';
 
 export function mergeDefaults(target, defaults) {
   if (defaults === null || typeof defaults !== 'object' || Array.isArray(defaults)) {
