@@ -346,15 +346,21 @@ function placeFormat(m, ecl, maskId) {
   const bits = formatBits(ecl, maskId);
   for (let i = 0; i < 15; i += 1) {
     const bit = (bits >>> i) & 1;
-    // 左上角
-    if (i < 6) m[8][i] = bit;
-    else if (i === 6) m[8][7] = bit;
+    // 左上角这一份：第 0–8 位落在**第 8 列**（竖着排），第 8–14 位落在**第 8 行**（横着排）。
+    //
+    // ⚠️ 这里曾经写反过（行/列对调），后果是**码看着完全正常、我们自己也能读回来，
+    //    但真手机/OpenCV 一律扫不出来** —— 因为格式信息（纠错等级 + 掩码号）
+    //    被放在了对称的位置上。自检解码器和编码器共享了同一个错误假设，所以内部一路绿灯。
+    //    教训：凡是"两个实现互相验"的场合，必须有一个**外部**参照
+    //    （这里是 build/qr-control.py：拿 Python qrcode 库 / OpenCV 对表）。
+    if (i < 6) m[i][8] = bit;
+    else if (i === 6) m[7][8] = bit;
     else if (i === 7) m[8][8] = bit;
-    else if (i === 8) m[7][8] = bit;
-    else m[14 - i][8] = bit;
-    // 副本
-    if (i < 8) m[size - 1 - i][8] = bit;
-    else m[8][size - 15 + i] = bit;
+    else if (i === 8) m[8][7] = bit;
+    else m[8][14 - i] = bit;
+    // 副本（同样别把行列弄反：0–7 位在**行 8** 的右端，8–14 位在**列 8** 的下端）
+    if (i < 8) m[8][size - 1 - i] = bit;
+    else m[size - 15 + i][8] = bit;
   }
   m[size - 8][8] = 1;
 }
@@ -384,11 +390,15 @@ function placeVersion(m, version) {
 /**
  * 生成二维码矩阵。
  * @param {string} text
- * @param {{ecl?: 'L'|'M'|'Q'|'H'}} opts
+ * @param {{ecl?: 'L'|'M'|'Q'|'H', mask?: number}} opts
+ *   `mask` 是**测试用**的逃生口：给 0–7 就跳过"挑最优掩码"直接用这一个。
+ *   掩码选择只是"哪个更耐脏"的启发式，8 个掩码都是合法码；要拿别的实现当参照
+ *   逐格比对时，必须先把掩码钉死，否则比出来的是两套打分算法的差异，不是对错。
  * @returns {{size:number, modules:number[][], version:number, mask:number, ecl:string}}
  */
 export function makeQrMatrix(text, opts = {}) {
   const ecl = opts.ecl || 'M';
+  const forcedMask = Number.isInteger(opts.mask) ? opts.mask : null;
   const bytes = utf8Encode(text);
   const version = pickVersion(bytes.length, ecl);
   const size = version * 4 + 17;
@@ -408,6 +418,7 @@ export function makeQrMatrix(text, opts = {}) {
 
   let best = null;
   for (let maskId = 0; maskId < 8; maskId += 1) {
+    if (forcedMask != null && maskId !== forcedMask) continue;
     const candidate = applyMask(base, maskId, reserved);
     placeFormat(candidate, ecl, maskId);
     placeVersion(candidate, version);
@@ -443,11 +454,12 @@ function readFormat(m) {
   let bits = 0;
   for (let i = 14; i >= 0; i -= 1) {
     let bit;
-    if (i < 6) bit = m[8][i];
-    else if (i === 6) bit = m[8][7];
+    // 必须与 placeFormat() 一一对应（见那里的注释：行/列曾经对调过）
+    if (i < 6) bit = m[i][8];
+    else if (i === 6) bit = m[7][8];
     else if (i === 7) bit = m[8][8];
-    else if (i === 8) bit = m[7][8];
-    else bit = m[14 - i][8];
+    else if (i === 8) bit = m[8][7];
+    else bit = m[8][14 - i];
     bits = (bits << 1) | bit;
   }
   const unmasked = bits ^ 0b101010000010010;

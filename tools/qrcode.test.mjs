@@ -3,8 +3,14 @@
 // 重点不是"看起来像二维码"，而是**能不能被读回来**：
 // 测试里带一个独立实现的反向解码器（去掩码 → 反交错 → 还原字节），
 // 用它把内容读出来比对，等价于"手机扫得出来"。
+//
+// ⚠️ 但"自己验自己"曾经漏掉过一个致命 bug（2026-10-08）：
+//    格式信息的位置行/列写反，编码器与自检解码器共享同一个错误假设，
+//    于是本文件、net.test.mjs、selfcheck.mjs 全绿，真手机/OpenCV 却一个都扫不出来。
+//    所以下面还有一组**外部参照**断言：矩阵必须与 Python `qrcode` 库逐格一致。
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { makeQrMatrix, decodeQrMatrix, qrToSvg } from '../core/qrcode.js';
 
@@ -102,4 +108,51 @@ test('SVG 输出包含黑白两种颜色与正确的 viewBox', () => {
   assert.match(svg, /fill="#000000"/);
   assert.match(svg, /fill="#ffffff"/);
   assert.match(svg, /<\/svg>$/);
+});
+
+// ---------------- 外部参照（防"自己验自己"） ----------------
+// tools/fixtures/qr-reference.json 由 build/make-qr-fixture.py 用 Python `qrcode` 库生成
+// （与本仓库毫无关系的外部实现），里面是 5 组用例的完整矩阵。
+//
+// 比对时要把掩码钉成参照那一颗：**掩码选择只是"哪个更耐脏"的启发式**，8 颗都是合法码，
+// 我们的打分与 Python 的打分在小尺寸上会挑出不同的掩码（实测 5 组里 2 组不同）。
+// 真正必须一致的是"同一颗掩码下，每一格都对得上" —— 格式信息的位置错了就会在这里现形。
+const REFERENCE = JSON.parse(readFileSync(new URL('./fixtures/qr-reference.json', import.meta.url), 'utf8'));
+
+test('与外部实现（Python qrcode 库）逐格一致', () => {
+  assert.ok(REFERENCE.cases.length >= 4, '外部参照不能是空的');
+  for (const c of REFERENCE.cases) {
+    const { modules, size, mask } = makeQrMatrix(c.text, { ecl: c.ecl, mask: c.mask });
+    const label = `${c.text} [${c.ecl}]`;
+    assert.equal(size, c.size, `${label} 版本/尺寸对不上`);
+    assert.equal(mask, c.mask, `${label} 掩码没有按参数钉住`);
+    const spots = [];
+    for (let r = 0; r < size; r += 1) {
+      for (let col = 0; col < size; col += 1) {
+        const want = c.rows[r][col] === '1' ? 1 : 0;
+        if (modules[r][col] !== want) {
+          spots.push(`(${r},${col})`);
+          if (spots.length >= 8) break;
+        }
+      }
+      if (spots.length >= 8) break;
+    }
+    assert.equal(spots.length, 0, `${label} 与外部实现对不上，例如这些格子：${spots.join(' ')}`);
+  }
+});
+
+test('外部实现生成的矩阵，我们的解码器也能读回来（反方向同样可信）', () => {
+  for (const c of REFERENCE.cases) {
+    const ref = c.rows.map((row) => [...row].map(Number));
+    assert.equal(decodeQrMatrix(ref), c.text, `${c.text} 读不回`);
+  }
+});
+
+test('钉住掩码只影响掩码本身，不影响内容（掩码是自由选择项）', () => {
+  const text = 'https://192.0.2.1:7443';
+  for (let mask = 0; mask < 8; mask += 1) {
+    const { modules, mask: got } = makeQrMatrix(text, { mask });
+    assert.equal(got, mask);
+    assert.equal(decodeQrMatrix(modules), text, `掩码 ${mask} 读不回`);
+  }
 });
