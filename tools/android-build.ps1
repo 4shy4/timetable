@@ -1,21 +1,37 @@
-﻿# 构建安卓 APK（用工作区自带的工具链，不依赖系统环境）
+# Build the Android APK with the workspace-local toolchain (no system setup needed).
 #
-# 用法：
-#   pwsh -File tools/android-build.ps1                # 只构建
-#   pwsh -File tools/android-build.ps1 -Install       # 构建并 adb install
-#   pwsh -File tools/android-build.ps1 -Clean         # 先 clean 再构建
+# IMPORTANT: THIS FILE MUST STAY PURE ASCII.
+# Windows PowerShell 5.1 reads a BOM-less UTF-8 .ps1 as ANSI/GBK. A Chinese string
+# literal can end in a byte that GBK swallows together with the closing quote, which
+# turns the rest of the file into a syntax error ("Missing closing '}'"). This has
+# already broken this exact script once. tools/ps1-ascii.test.mjs guards it.
+# Chinese is allowed on comment lines only (the parser reads them to end-of-line,
+# so mojibake there is cosmetic and cannot break parsing).
 #
-# 为什么要有这个脚本（而不是手敲 gradle 命令）：
-#   构建安卓需要 JAVA_HOME / ANDROID_HOME 三个环境变量指向工作区里的工具链，
-#   忘了设就会报"找不到 sdk.dir"或"JAVA_HOME is not set"这类看不懂的错。
-#   这里一次性设好，任何人（包括未来的我）不用再回忆。
+# Usage:
+#   pwsh -File tools/android-build.ps1                # debug build (daily work)
+#   pwsh -File tools/android-build.ps1 -Install       # build, then adb install
+#   pwsh -File tools/android-build.ps1 -Clean         # clean, then build
+#   pwsh -File tools/android-build.ps1 -Release       # release-signed (for users)
+#   pwsh -File tools/android-build.ps1 -WorkspaceGradleHome
+#       use build\gradle-home as GRADLE_USER_HOME (needed when the process may only
+#       write inside this repo -- otherwise Gradle dies before compiling)
 #
-# 本文件必须保持纯 ASCII：PowerShell 5.1 读无 BOM 的 UTF-8 会按 ANSI 解析，
-# 中文会变乱码甚至语法错误（这个项目已经踩过一次）。
+# Release vs debug signing: the two are DIFFERENT keys, so the APKs cannot
+# overwrite each other. If a phone already has the debug build installed, it must
+# be uninstalled before installing the release build (that wipes app data).
+# The release key comes from tools/make-release-keystore.ps1 -- lose it and you
+# can never push an update to anyone who installed your build.
+#
+# Why this script exists instead of a bare gradle command: building needs
+# JAVA_HOME / ANDROID_HOME pointing at the workspace toolchain; forget them and
+# you get cryptic "sdk.dir not found" / "JAVA_HOME is not set" errors.
 
 param(
   [switch]$Install,
-  [switch]$Clean
+  [switch]$Clean,
+  [switch]$Release,
+  [switch]$WorkspaceGradleHome
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,8 +47,8 @@ $adb = Join-Path $sdk 'platform-tools\adb.exe'
 
 foreach ($p in @($jdk, $sdk, $gradle)) {
   if (-not (Test-Path $p)) {
-    Write-Host "工具链缺失: $p" -ForegroundColor Red
-    Write-Host "先跑: node tools/android-bootstrap.mjs" -ForegroundColor Yellow
+    Write-Host "Toolchain missing: $p" -ForegroundColor Red
+    Write-Host "Run first: node tools/android-bootstrap.mjs" -ForegroundColor Yellow
     exit 1
   }
 }
@@ -40,6 +56,25 @@ foreach ($p in @($jdk, $sdk, $gradle)) {
 $env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = $sdk
 $env:ANDROID_SDK_ROOT = $sdk
+
+# Sandboxed runs (CI, or an agent restricted to the workspace) cannot write outside
+# the repo. Gradle MUST create its native-library lock under GRADLE_USER_HOME before
+# it compiles anything, so a home inside the user profile kills the build with
+#   "Could not initialize native services" / "native-platform.dll.lock (Access is denied)".
+# -WorkspaceGradleHome moves the Gradle home inside the repo and seeds it once from
+# the real one (~700 MB of dependency cache), which keeps every later write in-repo.
+if ($WorkspaceGradleHome) {
+  $wsHome = Join-Path $repoRoot 'build\gradle-home'
+  if (-not (Test-Path (Join-Path $wsHome 'caches'))) {
+    $srcHome = if ($env:GRADLE_USER_HOME) { $env:GRADLE_USER_HOME } else { Join-Path $env:USERPROFILE '.gradle' }
+    Write-Host "Seeding $wsHome from $srcHome (one-time, ~700 MB)..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Force -Path $wsHome | Out-Null
+    Copy-Item -Path (Join-Path $srcHome '*') -Destination $wsHome -Recurse -Force
+    Write-Host "Seeded." -ForegroundColor Green
+  }
+  $env:GRADLE_USER_HOME = $wsHome
+  Write-Host "Gradle home: $wsHome (in-workspace)" -ForegroundColor DarkGray
+}
 
 Write-Host "JDK    : $jdk" -ForegroundColor DarkGray
 Write-Host "SDK    : $sdk" -ForegroundColor DarkGray
@@ -49,36 +84,77 @@ Push-Location $androidDir
 try {
   $tasks = @()
   if ($Clean) { $tasks += 'clean' }
-  $tasks += ':app:assembleDebug'
 
-  Write-Host "`n==> gradle $($tasks -join ' ')" -ForegroundColor Cyan
-  & $gradle @tasks --no-daemon --console=plain
+  if ($Release) {
+    $propsFile = Join-Path $repoRoot '.secrets\keystore.properties'
+    if (-not (Test-Path $propsFile)) {
+      Write-Host "Release signing key missing: $propsFile" -ForegroundColor Red
+      Write-Host "Create it first: pwsh -File tools/make-release-keystore.ps1" -ForegroundColor Yellow
+      Write-Host "(Without it the build still succeeds, but the APK is unsigned." -ForegroundColor Yellow
+      Write-Host " Phones refuse to install an unsigned APK.)" -ForegroundColor Yellow
+      exit 1
+    }
+    $tasks += ':app:assembleRelease'
+  } else {
+    $tasks += ':app:assembleDebug'
+  }
+
+  $gradleArgs = @()
+  $gradleArgs += $tasks
+  $gradleArgs += '--no-daemon'
+  $gradleArgs += '--console=plain'
+  if ($WorkspaceGradleHome) {
+    # The Kotlin compile daemon writes its marker files under
+    # %LOCALAPPDATA%\kotlin\daemon, which a workspace-only sandbox denies:
+    #   "java.nio.file.AccessDeniedException: ...kotlin-daemon-client-tsmarker*.tmp"
+    # and the release Kotlin task then fails with paths mangled into \uXXXX escapes.
+    # Compiling in-process needs no daemon and no writes outside the repo.
+    $gradleArgs += '-Pkotlin.compiler.execution.strategy=in-process'
+  }
+
+  Write-Host "`n==> gradle $($gradleArgs -join ' ')" -ForegroundColor Cyan
+  & $gradle @gradleArgs
   $code = $LASTEXITCODE
   if ($code -ne 0) {
-    Write-Host "构建失败（退出码 $code）" -ForegroundColor Red
+    Write-Host "Build FAILED (exit $code)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Common causes seen in this repo:" -ForegroundColor Yellow
+    Write-Host "  * 'Could not initialize native services' / 'native-platform.dll.lock (Access is denied)'" -ForegroundColor Yellow
+    Write-Host "      => Gradle could not WRITE its native cache under $env:USERPROFILE\.gradle." -ForegroundColor Yellow
+    Write-Host "      => Happens when the process may only write inside the workspace. Re-run with:" -ForegroundColor Yellow
+    Write-Host "           pwsh -File tools/android-build.ps1 -WorkspaceGradleHome" -ForegroundColor Yellow
+    Write-Host "  * 'SDK location not found' => run node tools/android-bootstrap.mjs first." -ForegroundColor Yellow
     exit $code
   }
 
-  $apk = Join-Path $androidDir 'app\build\outputs\apk\debug\app-debug.apk'
+  if ($Release) {
+    $apk = Join-Path $androidDir 'app\build\outputs\apk\release\app-release.apk'
+  } else {
+    $apk = Join-Path $androidDir 'app\build\outputs\apk\debug\app-debug.apk'
+  }
   if (-not (Test-Path $apk)) {
-    Write-Host "没有生成 APK: $apk" -ForegroundColor Red
+    Write-Host "No APK produced: $apk" -ForegroundColor Red
     exit 1
   }
   $size = [math]::Round((Get-Item $apk).Length / 1MB, 2)
   Write-Host "`nAPK: $apk ($size MB)" -ForegroundColor Green
+  if ($Release) {
+    Write-Host "Release-signed: this is the file to hand to users." -ForegroundColor Green
+    Write-Host "Verify with: & '$sdk\build-tools\35.0.0\apksigner.bat' verify --print-certs '$apk'" -ForegroundColor DarkGray
+  }
 
   if ($Install) {
-    if (-not (Test-Path $adb)) { Write-Host "找不到 adb，无法安装" -ForegroundColor Red; exit 1 }
+    if (-not (Test-Path $adb)) { Write-Host "adb not found, cannot install" -ForegroundColor Red; exit 1 }
     $devices = & $adb devices | Select-String 'device$'
     if (-not $devices) {
-      Write-Host "没有连接的设备（adb devices 为空）。插上手机并允许 USB 调试后重试。" -ForegroundColor Yellow
-      Write-Host "APK 已生成，也可以手动装：adb install -r `"$apk`"" -ForegroundColor Yellow
+      Write-Host "No device attached (adb devices is empty). Plug in the phone and allow USB debugging." -ForegroundColor Yellow
+      Write-Host "The APK exists anyway; you can also install manually: adb install -r `"$apk`"" -ForegroundColor Yellow
       exit 0
     }
     Write-Host "`n==> adb install -r" -ForegroundColor Cyan
     & $adb install -r $apk
-    if ($LASTEXITCODE -ne 0) { Write-Host "安装失败" -ForegroundColor Red; exit 1 }
-    Write-Host "已安装。启动：adb shell am start -n com.timetable.app/.MainActivity" -ForegroundColor Green
+    if ($LASTEXITCODE -ne 0) { Write-Host "Install failed" -ForegroundColor Red; exit 1 }
+    Write-Host "Installed. Launch: adb shell am start -n com.timetable.app/.MainActivity" -ForegroundColor Green
   }
 }
 finally {

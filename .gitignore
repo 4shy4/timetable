@@ -30,7 +30,8 @@ ios/**/DerivedData/
 *.mobileprovision
 *.p12
 
-# 凭证（本项目不需要任何凭证，但防止误提交）
+# 凭证与签名密钥（自己发布安卓版时会生成 .secrets/keystore.properties 与 .keystore；
+# 密钥丢了就再也无法给已安装的用户推更新，泄露了别人能冒名发版 —— 绝不能入库）
 .secrets/
 *.token
 *.pfx

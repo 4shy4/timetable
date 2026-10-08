@@ -12,6 +12,19 @@ plugins {
   id 'org.jetbrains.kotlin.android'
 }
 
+// 正式发布签名：密钥与密码放在 .secrets/（本机文件，已被 .gitignore 挡住），
+// 生成方式见 tools/make-release-keystore.ps1。
+// · 没有这个文件时 release 构建**不签名**（能构建出来，但装不上）——
+//   别人 clone 下来照样能 build，不会因为缺密钥而卡住。
+// · debug 构建完全不受影响（一直用 Android 自带的 debug keystore）。
+// · ⚠️ 密钥丢了就再也无法给已安装的用户推更新（只能卸载重装），务必离线备份。
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('../.secrets/keystore.properties')
+def hasReleaseKey = keystorePropsFile.exists()
+if (hasReleaseKey) {
+  keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
   namespace 'com.timetable.app'
   compileSdk 35
@@ -26,11 +39,26 @@ android {
     versionName '0.12.0'
   }
 
+  signingConfigs {
+    if (hasReleaseKey) {
+      release {
+        // properties 里存的是**仓库根相对**路径，这里从 android/ 往上找一层
+        storeFile rootProject.file('../' + keystoreProps['storeFile'])
+        storePassword keystoreProps['storePassword']
+        keyAlias keystoreProps['keyAlias']
+        keyPassword keystoreProps['keyPassword']
+      }
+    }
+  }
+
   buildTypes {
     release {
-      // 第一版先用 debug 签名能装能跑；正式发布再加自己的 keystore
       minifyEnabled false
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      // 有密钥才签名：签出来的包才能覆盖安装到用户手机上
+      if (hasReleaseKey) {
+        signingConfig signingConfigs.release
+      }
     }
   }
 
